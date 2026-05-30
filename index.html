@@ -467,7 +467,8 @@ input[type=number]{-moz-appearance:textfield}
 .tdiv{color:var(--accent);opacity:.55;font-weight:600}
 .tbody{display:inline-flex}
 .tcell{display:inline-block;text-align:center;min-width:1ch;color:var(--ink)}
-.tcell.tcur{background:var(--accent);color:#fff;border-radius:1px}
+.tcell.tcur{background:var(--accent);color:#fff;border-radius:1px;animation:tab-blink 1s step-end infinite}
+@keyframes tab-blink{0%,100%{background:var(--accent)}50%{background:var(--accent-dim);color:var(--ink)}}
 .tab-grid{
   font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.45;
   background:var(--bg-1);border:1px solid var(--line-mid);border-radius:7px;
@@ -1138,77 +1139,204 @@ function tabRemoveColumn(containerId){
   refreshTabEditor(containerId);
 }
 
+/* Refresh: patch only changed cells and update cursor — never replaces the element.
+   This preserves focus and makes consecutive keystrokes work cleanly. */
 function refreshTabEditor(containerId){
   const el=document.getElementById(containerId); if(!el)return;
   const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
-  const html=renderTabEditor(ci,bi,type,containerId);
-  const tmp=document.createElement('div'); tmp.innerHTML=html;
-  el.replaceWith(tmp.firstElementChild);
-  bindTabEditor(containerId);
-  fitTabFont(containerId);
+  const grid=getTabGridFromBlock(ci,bi,type);
+  const cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:0;
+  const cpb=tabColsPerBar();
+  const bars=Math.max(1,Math.round(grid.cols.length/cpb));
+
+  // If column count changed (insert/remove col), we need a full rebuild.
+  const prevCols=parseInt(el.dataset.cols)||0;
+  if(prevCols!==grid.cols.length){
+    const tmp=document.createElement('div');
+    tmp.innerHTML=renderTabEditor(ci,bi,type,containerId);
+    const newEl=tmp.firstElementChild;
+    el.replaceWith(newEl);
+    bindTabEditor(containerId);
+    fitTabFontAll(ci); // fit ALL tab editors of this channel
+    newEl.focus();
+    return;
+  }
+
+  // Otherwise patch cells in place (fast path — no DOM rebuild, no focus loss).
+  el.dataset.cols=grid.cols.length;
+  el.dataset.bars=bars;
+  grid.labels.forEach(lab=>{
+    grid.cols.forEach((c,x)=>{
+      const cell=el.querySelector(`.tcell[data-col="${x}"][data-lab="${lab}"]`);
+      if(cell){
+        const v=c[lab]||'-';
+        if(cell.textContent!==v) cell.textContent=v;
+        const want=x===cur;
+        if(cell.classList.contains('tcur')!==want) cell.classList.toggle('tcur',want);
+      }
+    });
+  });
+  fitTabFontAll(ci);
 }
 
-/* Auto-scale font so all columns fit the width — no horizontal scroll. */
+/* Scale font so the longest riff of the channel fits — all blocks share the same width. */
+function fitTabFontAll(ci){
+  // Find the maximum cols across all visible tab editors for this channel
+  const editors=[...document.querySelectorAll(`.tabgrid[data-ci="${ci}"]`)];
+  if(!editors.length)return;
+  const maxCols=Math.max(...editors.map(e=>parseInt(e.dataset.cols)||16));
+  const maxBars=Math.max(...editors.map(e=>parseInt(e.dataset.bars)||1));
+  // compute font size from the widest editor's available width
+  // Use the first editor's clientWidth as reference (they're all same channel column)
+  const w=editors[0].clientWidth-4;
+  const totalChars=maxCols+(maxBars-1)+3;
+  let fs=w/(totalChars*0.6);
+  fs=clamp(fs,4,13);
+  // Apply same font size to all editors of this channel so they align
+  editors.forEach(e=>e.style.fontSize=fs+'px');
+}
+
+/* Keep for compat — routes to fitTabFontAll */
 function fitTabFont(containerId){
   const el=document.getElementById(containerId); if(!el)return;
-  const cols=parseInt(el.dataset.cols)||16;
-  const bars=parseInt(el.dataset.bars)||1;
-  // total chars on a row: label(1) + bar(1) + cols + separators(bars-1) + trailing bar(1)
-  const totalChars=cols+(bars-1)+3;
-  const w=el.clientWidth-4;
-  let fs=w/(totalChars*0.6); // monospace char ≈ 0.6em wide
-  fs=clamp(fs,5,13);
-  el.style.fontSize=fs+'px';
+  fitTabFontAll(el.dataset.ci);
 }
 
 /* Keyboard + click handling for the structured grid. */
+// Pending digit buffer: {containerId -> {digit, col, lab, timer}}
+const TAB_PENDING={};
+
 function bindTabEditor(containerId){
   const el=document.getElementById(containerId); if(!el)return;
   const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
 
-  // click a cell → place cursor there
+  // Click cell → set cursor + active string
   el.querySelectorAll('.tcell').forEach(cell=>{
     cell.addEventListener('mousedown',e=>{
       e.preventDefault();
-      TAB_CURSOR[containerId]={col:parseInt(cell.dataset.col)};
+      const col=parseInt(cell.dataset.col);
+      TAB_CURSOR[containerId]={col};
+      el.dataset.activeLab=cell.dataset.lab;
       el.focus();
-      markCursor(el,parseInt(cell.dataset.col));
+      markCursor(el,col);
     });
   });
 
   el.addEventListener('keydown',e=>{
     const grid=getTabGridFromBlock(ci,bi,type);
-    let cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:grid.cols.length-1;
-    const labels=grid.labels;
-    if(e.key==='ArrowLeft'){e.preventDefault();cur=clamp(cur-1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur};markCursor(el,cur);return;}
-    if(e.key==='ArrowRight'){e.preventDefault();cur=clamp(cur+1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur};markCursor(el,cur);return;}
-    // typing a fret number / technique char: write into the cell on the active string.
-    if(/^[0-9xXhHpPbB/\\~().*]$/.test(e.key)){
+    let cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:0;
+    const n=grid.cols.length;
+    const lab=el.dataset.activeLab||(grid.labels[0]);
+
+    // ── Navigation ──
+    if(e.key==='ArrowLeft'){
       e.preventDefault();
-      const lab=el.dataset.activeLab||labels[labels.length-1];
-      if(grid.cols[cur]){grid.cols[cur][lab]=e.key;saveTabGrid(ci,bi,grid)}
-      // advance cursor but never past the last column (columns are fixed by bars)
-      TAB_CURSOR[containerId]={col:clamp(cur+1,0,grid.cols.length-1)};
+      cur=clamp(cur-1,0,n-1);
+      TAB_CURSOR[containerId]={col:cur};
+      markCursor(el,cur);
+      return;
+    }
+    if(e.key==='ArrowRight'||e.key===' '){
+      e.preventDefault();
+      cur=clamp(cur+1,0,n-1);
+      TAB_CURSOR[containerId]={col:cur};
+      markCursor(el,cur);
+      return;
+    }
+
+    // ── '-' : push space on active string ──
+    if(e.key==='-'){
+      e.preventDefault();
+      flushPending(containerId,grid,lab); // commit any pending digit first
+      const chars=grid.cols.map(c=>c[lab]||'-');
+      let ri=-1;
+      for(let i=n-1;i>cur;i--){if(chars[i]==='-'){ri=i;break;}}
+      if(ri!==-1){for(let i=ri;i>cur;i--)grid.cols[i][lab]=chars[i-1];grid.cols[cur][lab]='-';}
+      else grid.cols[cur][lab]='-';
+      saveTabGrid(ci,bi,grid);
+      TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
       refreshTabEditor(containerId);
       return;
     }
+
+    // ── Digits: buffer for 2-digit frets (0–24) ──
+    if(/^[0-9]$/.test(e.key)){
+      e.preventDefault();
+      const pend=TAB_PENDING[containerId];
+      if(pend&&pend.col===cur&&pend.lab===lab){
+        // Second digit: combine into 2-digit fret
+        clearTimeout(pend.timer);
+        delete TAB_PENDING[containerId];
+        const combined=pend.digit+e.key;
+        if(grid.cols[cur])grid.cols[cur][lab]=combined;
+        saveTabGrid(ci,bi,grid);
+        TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
+        refreshTabEditor(containerId);
+      } else {
+        // First digit: write immediately, wait 400ms for second digit
+        if(grid.cols[cur])grid.cols[cur][lab]=e.key;
+        saveTabGrid(ci,bi,grid);
+        refreshTabEditor(containerId);
+        // Don't advance yet — wait to see if a second digit follows
+        const timer=setTimeout(()=>{
+          delete TAB_PENDING[containerId];
+          // Now advance cursor
+          TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
+          markCursor(document.getElementById(containerId),clamp(cur+1,0,n-1));
+        },400);
+        TAB_PENDING[containerId]={digit:e.key,col:cur,lab,timer};
+      }
+      return;
+    }
+
+    // ── Technique chars (h p b s x etc.) ──
+    if(/^[xXhHpPbBsS/\\~().*]$/.test(e.key)){
+      e.preventDefault();
+      flushPending(containerId,grid,lab);
+      if(grid.cols[cur]){grid.cols[cur][lab]=e.key;saveTabGrid(ci,bi,grid)}
+      TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
+      refreshTabEditor(containerId);
+      return;
+    }
+
+    // ── Backspace: retrocede cursor, pull left on active string ──
     if(e.key==='Backspace'){
       e.preventDefault();
-      const lab=el.dataset.activeLab||labels[labels.length-1];
-      if(grid.cols[cur]) grid.cols[cur][lab]='-';
+      flushPending(containerId,grid,lab);
+      // Move cursor back first
+      const target=clamp(cur-1,0,n-1);
+      // Pull: remove the char at `target`, shift right chars left, '-' at end
+      const chars=grid.cols.map(c=>c[lab]||'-');
+      for(let i=target;i<n-1;i++) grid.cols[i][lab]=chars[i+1];
+      grid.cols[n-1][lab]='-';
       saveTabGrid(ci,bi,grid);
-      // step back so repeated backspace clears leftward
-      TAB_CURSOR[containerId]={col:clamp(cur-1,0,grid.cols.length-1)};
+      TAB_CURSOR[containerId]={col:target};
+      refreshTabEditor(containerId);
+      return;
+    }
+
+    // ── Delete: clear cell in place, no movement ──
+    if(e.key==='Delete'){
+      e.preventDefault();
+      flushPending(containerId,grid,lab);
+      if(grid.cols[cur]){grid.cols[cur][lab]='-';saveTabGrid(ci,bi,grid)}
       refreshTabEditor(containerId);
       return;
     }
   });
 
-  // track which string-row is active (for typing) by remembering last clicked label
-  el.querySelectorAll('.tcell').forEach(cell=>{
-    cell.addEventListener('mousedown',()=>{ el.dataset.activeLab=cell.dataset.lab; });
-  });
   el.addEventListener('paste',e=>tabPaste(e,containerId));
+}
+
+/* Flush any pending 2-digit buffer immediately (called before ops that would conflict). */
+function flushPending(containerId,grid,lab){
+  const pend=TAB_PENDING[containerId];
+  if(!pend)return;
+  clearTimeout(pend.timer);
+  delete TAB_PENDING[containerId];
+  // already written the first digit; just advance
+  const n=grid?grid.cols.length:999;
+  TAB_CURSOR[containerId]={col:clamp(pend.col+1,0,n-1)};
 }
 
 function markCursor(el,col){
@@ -1248,7 +1376,7 @@ function renderEditor(){if(STATE.ui.view==='channel')return renderChannelView();
 function renderContent(ch,block){const data=block.content[ch.id]||defaultContent(ch.type);switch(ch.type){
 case'lyrics':return`<textarea class="lyric-area" placeholder="Write lyrics here…" oninput="setText('${ch.id}','${block.id}',this.value)">${escapeHTML(data.text||'')}</textarea>`;
 case'rhythm':return renderChordEditor(ch,block,data);
-case'lead':case'bass':{const cid=`tab_${ch.id}_${block.id}`;const tt=tabType(ch);const ns=tt==='bass'?4:6;return`<div class="tab-toolbar"><button class="tab-tool-btn" onclick="setBars('${block.id}',${block.bars+1})" title="Add a bar (rescales the riff)">+ Bar</button><button class="tab-tool-btn" onclick="setBars('${block.id}',${Math.max(1,block.bars-1)})" title="Remove a bar (rescales the riff)">− Bar</button><span class="tab-strings-badge">${ns} strings · ${block.bars} bar${block.bars>1?'s':''} · ${tabColsPerBar()} steps/bar</span></div>${renderTabEditor(ch.id,block.id,tt,cid)}<div class="tab-hint">Click a cell, type fret numbers · ← → move · | marks each bar · Paste auto-fits to ${ns} strings</div>`}
+case'lead':case'bass':{const cid=`tab_${ch.id}_${block.id}`;const tt=tabType(ch);const ns=tt==='bass'?4:6;return`<div class="tab-toolbar"><button class="tab-tool-btn" onclick="tabInsertColumn('${cid}')" title="Inserta columna vacía en cursor (todas las cuerdas)">+ Col</button><button class="tab-tool-btn" onclick="tabRemoveColumn('${cid}')" title="Elimina columna del cursor (todas las cuerdas)">− Col</button><span class="tab-strings-badge">${ns} str · ${block.bars} bar${block.bars>1?'s':''} · ${tabColsPerBar()} pasos/bar</span></div>${renderTabEditor(ch.id,block.id,tt,cid)}<div class="tab-hint">Click cuerda + escribí traste · ← → mover · - espacio con push · Backspace borra+pull · Delete borra en lugar · + Col / − Col columna completa</div>`}
 case'drums':return renderDrumGrid(ch,block,data);
 default:return`<textarea class="notes-area" placeholder="Notes…" oninput="setText('${ch.id}','${block.id}',this.value)">${escapeHTML(data.text||'')}</textarea>`}}
 
@@ -1337,7 +1465,8 @@ function renderChannelView(){
   bindDragAndDrop();bindDrumCells(ch);
   if(ch.type==='lead'||ch.type==='bass'){
     requestAnimationFrame(()=>{
-      $$('.tabgrid').forEach(g=>{bindTabEditor(g.id);fitTabFont(g.id)});
+      $$('.tabgrid').forEach(g=>bindTabEditor(g.id));
+      fitTabFontAll(ch.id);
     });
   }
 }
@@ -1636,7 +1765,10 @@ function bindAll(){
   const mask=$('#channelModal');
   mask.addEventListener('click',e=>{if(e.target===mask)closeChannelModal();const a=e.target.closest('[data-action]')?.dataset.action;if(a==='close-channel-modal')closeChannelModal();if(a==='confirm-channel')confirmAddChannel()});
   // Refit tab fonts when the window resizes so they always fill the slot
-  let rT;window.addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{$$('.tabgrid').forEach(g=>fitTabFont(g.id))},120)});
+  let rT;window.addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{
+    const seen=new Set();
+    document.querySelectorAll('.tabgrid').forEach(g=>{if(!seen.has(g.dataset.ci)){seen.add(g.dataset.ci);fitTabFontAll(g.dataset.ci)}});
+  },120)});
 }
 
 /* ── Init ── */
