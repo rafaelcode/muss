@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Muss — Song Workbench</title>
+<title>Muss — Library &amp; Workbench</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
@@ -418,6 +418,12 @@ input[type=number]{-moz-appearance:textfield}
 }
 .cp-chip-edit:hover{color:var(--accent);background:var(--bg-3)}
 .cp-chip-del:hover{color:var(--red);background:var(--bg-3)}
+.cp-select{
+  background:var(--bg-1);border:1px solid var(--line-mid);color:var(--ink-dim);
+  padding:3px 8px;border-radius:6px;font-family:'Inter',sans-serif;font-size:10px;
+  cursor:pointer;outline:none;max-width:180px;
+}
+.cp-select:focus{border-color:var(--accent)}
 
 /* chord timeline laid out across bars */
 .chord-timeline{position:relative;margin-bottom:6px;border:1px solid var(--line-mid);border-radius:8px;overflow:hidden;background:var(--bg-1)}
@@ -431,19 +437,27 @@ input[type=number]{-moz-appearance:textfield}
 .chord-slot{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
   background:var(--accent-bg);border:1px solid rgba(79,110,247,.2);border-radius:6px;
-  margin:0 2px;min-width:0;overflow:hidden;flex-basis:0;flex-shrink:1;box-sizing:border-box;
+  margin:0 2px;min-width:0;overflow:visible;flex-basis:0;flex-shrink:1;box-sizing:border-box;
+  position:relative;user-select:none;
 }
+.chord-slot.chord-active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.chord-slot.chord-active .chord-name{color:#fff}
+.chord-slot.chord-active .chord-beats{color:rgba(255,255,255,.75)}
+.chord-resize{
+  position:absolute;right:-5px;top:0;bottom:0;width:10px;
+  cursor:col-resize;z-index:20;display:flex;align-items:center;justify-content:center;
+}
+.chord-resize::after{
+  content:'';width:3px;height:55%;border-radius:2px;
+  background:rgba(79,110,247,.3);transition:background .1s,transform .1s;
+}
+.chord-resize:hover::after{background:var(--accent);transform:scaleX(1.5)}
+.chord-resize.dragging::after{background:var(--accent)}
 .chord-name{
   font-family:'Fraunces',serif;font-weight:500;font-size:15px;color:var(--accent);
   outline:none;cursor:text;text-align:center;width:100%;padding:0 2px;
 }
 .chord-name:focus{background:#fff;border-radius:3px}
-.chord-dur{display:flex;align-items:center;gap:3px}
-.chord-dur button{
-  width:16px;height:16px;border:1px solid var(--line-mid);background:var(--bg-0);
-  color:var(--ink-dim);border-radius:3px;cursor:pointer;font-size:11px;line-height:1;padding:0;
-}
-.chord-dur button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .chord-beats{font-size:9px;color:var(--ink-dim);font-family:'JetBrains Mono',monospace;min-width:18px;text-align:center}
 .chord-add-slot{
   align-self:center;background:transparent;border:1px dashed var(--line-mid);color:var(--ink-faint);
@@ -454,6 +468,77 @@ input[type=number]{-moz-appearance:textfield}
 .chord-fill.ok{color:var(--green)}
 .chord-fill.under{color:var(--ink-faint)}
 .chord-fill.over{color:var(--red)}
+
+/* ── Rhythm sub-tabs ── */
+.rhythm-tabs{display:flex;gap:2px;margin-bottom:14px;background:var(--bg-1);border:1px solid var(--line-mid);border-radius:8px;padding:3px}
+.rhythm-tab{flex:1;padding:6px 10px;background:transparent;border:none;color:var(--ink-faint);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:6px;transition:all .12s}
+.rhythm-tab.active{background:var(--bg-0);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* ── Pattern catalog ── */
+.pattern-catalog{padding:4px 0}
+.pattern-catalog-empty{text-align:center;padding:40px 20px;color:var(--ink-faint);font-size:12px;border:1px dashed var(--line-mid);border-radius:10px;line-height:1.6}
+.pattern-grid{display:flex;flex-direction:column;gap:12px}
+.pattern-card{background:var(--bg-0);border:1px solid var(--line-mid);border-radius:10px;overflow:hidden;transition:box-shadow .12s}
+.pattern-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.pattern-card-head{padding:10px 14px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.pattern-card-name{flex:1;font-family:'Fraunces',serif;font-size:16px;font-weight:300;font-style:italic;color:var(--ink);outline:none;background:transparent;border:none;border-bottom:1px dashed transparent;cursor:text;min-width:0}
+.pattern-card-name:focus{border-bottom-color:var(--accent)}
+.pattern-card-del{width:22px;height:22px;border:none;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:14px;border-radius:3px;opacity:0;transition:opacity .1s;flex-shrink:0;display:grid;place-items:center}
+.pattern-card:hover .pattern-card-del{opacity:1}
+.pattern-card-del:hover{color:var(--red)}
+.pattern-card-body{padding:12px 14px}
+.pattern-meta{font-size:9px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;margin-bottom:10px;letter-spacing:.06em}
+.pattern-chords-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.pattern-chord-pill{background:var(--accent-bg);border:1px solid rgba(79,110,247,.15);color:var(--accent);padding:3px 8px;border-radius:5px;font-family:'Fraunces',serif;font-size:13px;font-weight:500;display:flex;align-items:center;gap:3px}
+.pattern-chord-pill span{font-size:8px;color:var(--accent-dim);font-family:'JetBrains Mono',monospace}
+.pattern-card-actions{display:flex;gap:6px}
+.pattern-apply-btn{flex:1;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:.04em;transition:background .12s}
+.pattern-apply-btn:hover{background:var(--accent-dim)}
+.pattern-dup-btn{background:var(--bg-1);border:1px solid var(--line-mid);color:var(--ink-dim);border-radius:6px;padding:7px 12px;font-family:'Inter',sans-serif;font-size:10px;font-weight:500;cursor:pointer;transition:all .12s;white-space:nowrap}
+.pattern-dup-btn:hover{background:var(--accent-bg);color:var(--accent);border-color:var(--accent)}
+/* bar ruler inside pattern timeline */
+.pattern-bar-ruler{display:flex;border-bottom:1px solid var(--line);margin-bottom:0;height:18px;position:relative}
+.pattern-bar-cell{flex:1;border-right:1px solid var(--line);display:flex;align-items:center;padding-left:5px}
+.pattern-bar-cell:last-child{border-right:none}
+.pattern-bar-num{font-size:8px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace}
+/* taller chord slots in pattern view */
+.pattern-timeline-wrap{border:1px solid var(--line-mid);border-radius:8px;overflow:hidden;margin-bottom:8px;background:var(--bg-1)}
+.pattern-slots-inner{min-height:72px;padding:16px 4px 6px}
+
+/* ── Chord catalog ── */
+.chord-catalog{padding:4px 0}
+.chord-dict-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px}
+.chord-dict-card{background:var(--bg-0);border:1px solid var(--line-mid);border-radius:8px;padding:10px 8px;text-align:center;cursor:default;transition:all .12s}
+.chord-dict-card:hover{border-color:var(--accent);background:var(--accent-bg)}
+.chord-dict-name{font-family:'Fraunces',serif;font-size:15px;font-weight:500;color:var(--accent);display:block;margin-bottom:3px}
+.chord-dict-count{font-size:8px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace}
+
+/* ── Tab channel sub-tabs (Blocks | Riffs) ── */
+.tab-channel-tabs{display:flex;gap:2px;margin-bottom:14px;background:var(--bg-1);border:1px solid var(--line-mid);border-radius:8px;padding:3px}
+.tab-channel-tab{flex:1;padding:6px 10px;background:transparent;border:none;color:var(--ink-faint);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:6px;transition:all .12s}
+.tab-channel-tab.active{background:var(--bg-0);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* ── Riff catalog ── */
+.riff-catalog{padding:4px 0}
+.riff-catalog-empty{text-align:center;padding:40px 20px;color:var(--ink-faint);font-size:12px;border:1px dashed var(--line-mid);border-radius:10px;line-height:1.6}
+.riff-grid{display:flex;flex-direction:column;gap:12px}
+.riff-card{background:var(--bg-0);border:1px solid var(--line-mid);border-radius:10px;overflow:hidden;transition:box-shadow .12s}
+.riff-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.riff-card-head{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.riff-card-name{flex:1;font-family:'Fraunces',serif;font-size:16px;font-weight:300;font-style:italic;color:var(--ink);outline:none;background:transparent;border:none;border-bottom:1px dashed transparent;cursor:text;min-width:0}
+.riff-card-name:focus{border-bottom-color:var(--accent)}
+.riff-card-type{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-faint);padding:2px 7px;background:var(--bg-2);border-radius:4px;letter-spacing:.06em}
+.riff-card-del{width:22px;height:22px;border:none;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:14px;border-radius:3px;opacity:0;transition:opacity .1s;flex-shrink:0;display:grid;place-items:center}
+.riff-card:hover .riff-card-del{opacity:1}
+.riff-card-del:hover{color:var(--red)}
+.riff-card-body{padding:12px 14px}
+.riff-card-preview{background:var(--bg-1);border:1px solid var(--line-mid);border-radius:7px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.45;color:var(--ink-dim);white-space:pre;overflow-x:auto;margin-bottom:10px;max-height:100px}
+.riff-card-meta{font-size:9px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;margin-bottom:10px;letter-spacing:.06em}
+.riff-card-actions{display:flex;gap:6px}
+.riff-apply-btn{flex:1;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:.04em;transition:background .12s}
+.riff-apply-btn:hover{background:var(--accent-dim)}
+.riff-dup-btn{background:var(--bg-1);border:1px solid var(--line-mid);color:var(--ink-dim);border-radius:6px;padding:7px 12px;font-family:'Inter',sans-serif;font-size:10px;font-weight:500;cursor:pointer;transition:all .12s;white-space:nowrap}
+.riff-dup-btn:hover{background:var(--accent-bg);color:var(--accent);border-color:var(--accent)}
 .tabgrid{
   font-family:'JetBrains Mono',monospace;line-height:1.35;
   background:var(--bg-1);border:1px solid var(--line-mid);border-radius:7px;
@@ -467,8 +552,7 @@ input[type=number]{-moz-appearance:textfield}
 .tdiv{color:var(--accent);opacity:.55;font-weight:600}
 .tbody{display:inline-flex}
 .tcell{display:inline-block;text-align:center;min-width:1ch;color:var(--ink)}
-.tcell.tcur{background:var(--accent);color:#fff;border-radius:1px;animation:tab-blink 1s step-end infinite}
-@keyframes tab-blink{0%,100%{background:var(--accent)}50%{background:var(--accent-dim);color:var(--ink)}}
+.tcell.tcur{background:var(--accent);color:#fff;border-radius:1px}
 .tab-grid{
   font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.45;
   background:var(--bg-1);border:1px solid var(--line-mid);border-radius:7px;
@@ -696,9 +780,568 @@ input[type=number]{-moz-appearance:textfield}
   box-shadow:0 4px 16px rgba(0,0,0,.2);
 }
 @keyframes flashIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ===== DASHBOARD STYLES ===== */
+/* ═══════════════════════════════════════════════════════
+   LIBRARY / DASHBOARD  (screen layer + lib- prefixed UI)
+   Reuses the workbench design tokens defined in :root above.
+   ═══════════════════════════════════════════════════════ */
+:root{
+  --g-rock:#e05c3a; --g-pop:#c46bb0; --g-jazz:#2a9d8f; --g-metal:#1a1917;
+  --g-folk:#c08040; --g-blues:#4fa8b8; --g-latin:#d4521e; --g-indie:#4aab6d;
+  --g-country:#b5832a; --g-other:#7c69f5;
+}
+
+/* Screen router — only one screen visible at a time */
+html,body{overflow:hidden}
+.screen{display:none;height:100vh}
+.screen.active{display:block}
+
+/* ── Library shell ──────────────────────────────────── */
+.lib-app{display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg-1)}
+
+/* Topbar */
+.lib-topbar{
+  display:flex;align-items:stretch;flex-shrink:0;height:54px;
+  background:var(--bg-0);border-bottom:1px solid var(--line);box-shadow:0 1px 0 var(--line);z-index:100;
+}
+.lib-search{flex:1;display:flex;align-items:center;padding:0 18px;border-right:1px solid var(--line)}
+.lib-search-wrap{position:relative;width:100%;max-width:420px}
+.lib-search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--ink-faint);pointer-events:none}
+.lib-search-input{
+  width:100%;padding:7px 12px 7px 33px;background:var(--bg-1);
+  border:1px solid var(--line-mid);border-radius:8px;color:var(--ink);
+  font-family:'Inter',sans-serif;font-size:12px;outline:none;transition:border-color .15s,background .15s;
+}
+.lib-search-input::placeholder{color:var(--ink-faint)}
+.lib-search-input:focus{background:var(--bg-0);border-color:var(--accent)}
+.lib-top-actions{display:flex;align-items:center}
+.lib-menu-btn{
+  display:none;background:transparent;border:none;border-left:1px solid var(--line);
+  color:var(--ink-dim);padding:0 16px;cursor:pointer;align-items:center;
+}
+
+/* Body */
+.lib-body{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.lib-sidebar{
+  width:220px;flex-shrink:0;background:var(--bg-0);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden;transition:transform .25s var(--ease);
+}
+.lib-side-section{padding:16px 14px 10px;border-bottom:1px solid var(--line)}
+.lib-side-section.grow{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.lib-side-label{font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px;padding:0 2px}
+.lib-nav{
+  display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;cursor:pointer;
+  color:var(--ink-dim);font-size:12px;font-weight:500;transition:background .1s,color .1s;user-select:none;
+}
+.lib-nav:hover{background:var(--bg-1);color:var(--ink)}
+.lib-nav.active{background:var(--accent-bg);color:var(--accent)}
+.lib-nav svg{width:14px;height:14px;flex-shrink:0}
+.lib-nav-count{margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--ink-faint)}
+.lib-nav.active .lib-nav-count{color:var(--accent-dim)}
+.lib-genres{display:flex;flex-direction:column;gap:1px;overflow-y:auto}
+.lib-genre{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .1s}
+.lib-genre:hover{background:var(--bg-1)}
+.lib-genre.active{background:var(--accent-bg)}
+.lib-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.lib-genre-name{font-size:12px;color:var(--ink-dim);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-genre.active .lib-genre-name{color:var(--accent);font-weight:500}
+.lib-genre-count{font-size:10px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace}
+.lib-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
+
+/* Content */
+.lib-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 28px;background:var(--bg-1)}
+.lib-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.lib-title{font-family:'Fraunces',serif;font-size:22px;font-weight:300;color:var(--ink);flex:1;min-width:0}
+.lib-title span{font-size:12px;color:var(--ink-faint);font-family:'Inter',sans-serif;font-weight:400;font-style:normal}
+.lib-sort{display:flex;align-items:center;gap:6px}
+.lib-sort-label{font-size:10px;font-weight:500;color:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase}
+.lib-vtoggle{display:flex;background:var(--bg-0);border:1px solid var(--line-mid);border-radius:7px;overflow:hidden}
+.lib-vtoggle button{
+  background:transparent;border:none;border-right:1px solid var(--line);color:var(--ink-faint);
+  padding:5px 9px;cursor:pointer;transition:all .1s;display:flex;align-items:center;
+}
+.lib-vtoggle button:last-child{border-right:none}
+.lib-vtoggle button.active{background:var(--accent-bg);color:var(--accent)}
+.lib-vtoggle button svg{width:13px;height:13px}
+
+/* Artist / group headers */
+.lib-group{margin-bottom:28px}
+.lib-group-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.lib-avatar{
+  width:32px;height:32px;border-radius:50%;color:#fff;display:grid;place-items:center;
+  font-family:'Fraunces',serif;font-size:14px;font-weight:400;font-style:italic;flex-shrink:0;
+}
+.lib-group-name{font-family:'Fraunces',serif;font-size:16px;font-weight:300;color:var(--ink)}
+.lib-group-count{font-size:10px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace}
+
+/* Grid */
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.lib-card{
+  background:var(--bg-0);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;
+  transition:box-shadow .18s var(--ease),border-color .18s,transform .15s var(--ease);position:relative;
+}
+.lib-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.09);border-color:var(--line-mid);transform:translateY(-2px)}
+.lib-card:active{transform:translateY(0)}
+.lib-thumb{height:110px;position:relative;overflow:hidden;background:var(--bg-2)}
+.lib-thumb-letter{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',serif;font-size:42px;font-weight:300;font-style:italic;transition:transform .3s var(--ease);
+}
+.lib-card:hover .lib-thumb-letter{transform:scale(1.07)}
+.lib-badge{
+  position:absolute;top:8px;right:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:#fff;backdrop-filter:blur(4px);
+}
+.lib-play{
+  position:absolute;bottom:10px;right:10px;width:32px;height:32px;border-radius:50%;
+  background:var(--accent);color:#fff;display:grid;place-items:center;opacity:0;transform:scale(.8);
+  transition:opacity .18s,transform .18s;box-shadow:0 4px 12px var(--accent-glow);
+}
+.lib-play svg{width:13px;height:13px;margin-left:2px}
+.lib-card:hover .lib-play{opacity:1;transform:scale(1)}
+.lib-card-body{padding:11px 13px 13px}
+.lib-card-title{font-family:'Fraunces',serif;font-size:14px;font-weight:300;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.lib-card-artist{font-size:10px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-card-meta{display:flex;align-items:center;gap:6px;margin-top:8px}
+.lib-bpm{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);background:var(--accent-bg);padding:2px 6px;border-radius:4px}
+.lib-sig{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint)}
+.lib-chans{margin-left:auto;display:flex;gap:2px}
+.lib-chdot{width:6px;height:6px;border-radius:50%;background:var(--bg-3)}
+.lib-chdot.on{background:var(--accent-dim)}
+.lib-card-ov{position:absolute;top:6px;left:6px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.lib-card:hover .lib-card-ov{opacity:1}
+.lib-mini{
+  width:24px;height:24px;border-radius:5px;background:rgba(255,255,255,.85);backdrop-filter:blur(4px);
+  border:1px solid var(--line-mid);cursor:pointer;display:grid;place-items:center;color:var(--ink-dim);font-size:11px;transition:all .1s;
+}
+.lib-mini:hover{background:#fff;color:var(--ink)}
+.lib-mini.del:hover{color:var(--red)}
+.lib-mini.fav.on{color:var(--red)}
+
+/* List */
+.lib-list{display:flex;flex-direction:column}
+.lib-row{
+  display:grid;grid-template-columns:32px 1fr auto auto auto 70px;align-items:center;gap:12px;
+  padding:9px 12px;border-radius:8px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--line);
+}
+.lib-row:hover{background:var(--bg-0)}
+.lib-row-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-faint);text-align:center}
+.lib-row-info{min-width:0}
+.lib-row-title{font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-row-artist{font-size:10px;color:var(--ink-faint);margin-top:1px}
+.lib-row-bpm,.lib-row-sig{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-faint);white-space:nowrap}
+.lib-row-acts{display:flex;gap:4px;opacity:0;transition:opacity .1s}
+.lib-row:hover .lib-row-acts{opacity:1}
+
+/* Table (searchable) */
+.lib-table-wrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg-0)}
+.lib-table{width:100%;border-collapse:collapse;font-size:12px}
+.lib-table thead th{
+  background:var(--bg-1);border-bottom:1px solid var(--line-mid);text-align:left;
+  padding:10px 14px;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
+  cursor:pointer;user-select:none;white-space:nowrap;
+}
+.lib-table thead th:hover{color:var(--ink)}
+.lib-table thead th .arr{font-size:8px;margin-left:3px;color:var(--accent)}
+.lib-table thead th.center{text-align:center}
+.lib-table tbody tr{border-bottom:1px solid var(--line);cursor:pointer;transition:background .1s}
+.lib-table tbody tr:last-child{border-bottom:none}
+.lib-table tbody tr:hover{background:var(--bg-1)}
+.lib-table td{padding:9px 14px;color:var(--ink);vertical-align:middle}
+.lib-td-title{font-weight:500}
+.lib-td-sub{font-size:10px;color:var(--ink-faint);margin-top:1px}
+.lib-td-mono{font-family:'JetBrains Mono',monospace;color:var(--ink-dim)}
+.lib-td-center{text-align:center}
+.lib-pill{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;
+  font-size:10px;font-weight:500;background:var(--bg-2);color:var(--ink-dim);
+}
+.lib-td-acts{display:flex;gap:5px;justify-content:flex-end}
+.lib-num{
+  width:22px;height:22px;border-radius:5px;background:var(--bg-2);border:1px solid var(--line-mid);
+  cursor:pointer;display:grid;place-items:center;color:var(--ink-dim);font-size:10px;transition:all .1s;
+}
+.lib-num:hover{background:var(--bg-3);color:var(--ink)}
+.lib-num.del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.lib-num.fav.on{color:var(--red)}
+
+/* Empty */
+.lib-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;text-align:center}
+.lib-empty-icon{font-family:'Fraunces',serif;font-size:64px;font-style:italic;color:var(--bg-3);margin-bottom:20px;line-height:1}
+.lib-empty-title{font-family:'Fraunces',serif;font-size:20px;font-weight:300;font-style:italic;color:var(--ink-dim);margin-bottom:8px}
+.lib-empty-sub{font-size:12px;color:var(--ink-faint);margin-bottom:24px;line-height:1.6}
+.lib-cta{
+  background:var(--accent);color:#fff;border:none;padding:9px 22px;border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;transition:background .12s;
+}
+.lib-cta:hover{background:var(--accent-dim)}
+
+/* Back button in workbench */
+.wb-back{
+  background:transparent;border:none;border-right:1px solid var(--line);color:var(--ink-dim);
+  padding:0 14px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;transition:background .12s,color .12s;
+}
+.wb-back:hover{background:var(--bg-1);color:var(--accent)}
+.wb-back svg{width:14px;height:14px}
+
+/* New-song modal field rows (reuse .modal styles from workbench) */
+.lib-field{margin-bottom:14px}
+.lib-field label{display:block;font-size:10px;font-weight:500;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.lib-field input,.lib-field select{
+  width:100%;background:var(--bg-1);border:1px solid var(--line-mid);color:var(--ink);
+  padding:8px 12px;border-radius:7px;font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .15s,background .15s;
+}
+.lib-field input:focus,.lib-field select:focus{background:var(--bg-0);border-color:var(--accent)}
+.lib-field select{
+  appearance:none;-webkit-appearance:none;padding-right:28px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%236b6a64' d='M0 0h8L4 5z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;background-color:var(--bg-1);
+}
+.lib-field input[type=number]{font-family:'JetBrains Mono',monospace;font-size:15px}
+.lib-field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── Responsive ───────────────────────────────────────── */
+@media(max-width:860px){
+  .lib-content{padding:18px}
+  .lib-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+}
+@media(max-width:640px){
+  .lib-sidebar{position:fixed;top:54px;bottom:0;left:0;z-index:100;transform:translateX(-100%);box-shadow:4px 0 24px rgba(0,0,0,.12)}
+  .lib-sidebar.open{transform:translateX(0)}
+  .lib-overlay.show{display:block}
+  .lib-menu-btn{display:flex}
+  .lib-search{padding:0 12px}
+  .lib-hide-mobile{display:none}
+  .lib-content{padding:14px}
+  .lib-title{font-size:18px}
+  .lib-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .lib-thumb{height:90px}
+  .lib-row{grid-template-columns:24px 1fr auto;gap:10px}
+  .lib-row-bpm,.lib-row-sig,.lib-row-acts{display:none}
+  /* Table → hide secondary columns on phones */
+  .lib-table .col-genre,.lib-table .col-sig,.lib-table .col-chans{display:none}
+  .lib-table td,.lib-table th{padding:8px 10px}
+  /* Workbench topbar: collapse song-info grid on phones */
+  .song-info{grid-template-columns:1fr !important}
+  .song-info .info-cell:nth-child(n+2){display:none}
+  .top-actions .action-btn{padding:0 12px;font-size:10px}
+}
+@media(max-width:400px){
+  .lib-grid{grid-template-columns:1fr 1fr}
+}
+
+
+/* ═══════ OVERVIEW · columnar (one column per channel) ═══════ */
+.ov-grid-wrap{overflow-x:auto;overflow-y:visible;padding-bottom:8px}
+.ov-channel-head{
+  display:grid;gap:0;position:sticky;top:0;z-index:8;
+  background:var(--bg-1);border-bottom:1px solid var(--line-mid);
+  margin-bottom:8px;min-width:max-content;
+}
+.ov-ch-cell{
+  padding:8px 12px;border-left:1px solid var(--line);
+  display:flex;align-items:center;gap:7px;
+}
+.ov-ch-cell:first-child{border-left:none}
+.ov-ch-swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0;background:var(--ch-color,var(--accent))}
+.ov-ch-title{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+.ov-ch-sub{font-size:8px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.1em}
+.ov-ch-gutter{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+
+.ov-row{
+  display:grid;gap:0;min-width:max-content;
+  margin-bottom:8px;border:1px solid var(--line-mid);
+  background:var(--bg-0);border-radius:10px;overflow:hidden;
+  transition:box-shadow .15s,border-color .15s;position:relative;
+}
+.ov-row:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.ov-row.disabled{opacity:.32}
+.ov-row.current{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.ov-row.dragging{opacity:.35}
+.ov-row.drag-over{border-color:var(--accent)}
+
+/* gutter cell (block number + section + bars) */
+.ov-gutter{
+  background:var(--bg-1);border-right:1px solid var(--line);
+  padding:10px 10px;display:flex;flex-direction:column;gap:7px;cursor:grab;
+}
+.ov-gutter:active{cursor:grabbing}
+.ov-gutter-top{display:flex;align-items:baseline;gap:6px}
+.ov-gutter-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;color:var(--ink-dim);line-height:1}
+.ov-gutter-beats{font-size:8px;color:var(--ink-faint);letter-spacing:.06em}
+.ov-gutter-bars{display:flex;align-items:center;gap:5px}
+.ov-gutter-bars label{font-size:8px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em}
+
+/* channel cell */
+.ov-cell{
+  padding:10px 12px;border-left:1px solid var(--line);min-width:0;position:relative;
+  display:flex;flex-direction:column;gap:6px;
+}
+.ov-cell.muted{background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(0,0,0,.018) 6px,rgba(0,0,0,.018) 12px)}
+.ov-cell-empty{color:var(--ink-faint);font-size:12px;font-style:italic;opacity:.6}
+
+/* lyrics cell keeps the editable textarea */
+.ov-cell .ov-lyric-edit{min-height:40px}
+
+/* repeat / pattern badges */
+.ov-repeat{
+  display:inline-flex;align-items:center;gap:4px;align-self:flex-start;
+  font-size:9px;font-weight:600;letter-spacing:.04em;
+  background:var(--accent-bg);color:var(--accent);border:1px solid rgba(79,110,247,.2);
+  padding:2px 7px;border-radius:20px;white-space:nowrap;
+}
+.ov-repeat.pattern{background:var(--bg-2);color:var(--ink-dim);border-color:var(--line-mid)}
+.ov-repeat svg{width:9px;height:9px}
+
+/* time-respecting chord lane */
+.ov-chord-lane{
+  display:flex;gap:3px;align-items:stretch;width:100%;
+}
+.ov-chord-cell{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--accent-bg);border:1px solid rgba(79,110,247,.18);border-radius:5px;
+  padding:4px 2px;min-width:0;overflow:hidden;
+}
+.ov-chord-cell .nm{font-family:'Fraunces',serif;font-size:13px;font-weight:500;color:var(--accent);line-height:1.1;white-space:nowrap}
+.ov-chord-cell .bt{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--accent-dim);opacity:.8;margin-top:1px}
+.ov-bar-ticks{display:flex;width:100%;margin-top:2px;height:3px;gap:0}
+.ov-bar-tick{flex:1;border-left:1px solid var(--line-mid);height:100%}
+.ov-bar-tick:first-child{border-left:none}
+
+/* tab preview cell */
+.ov-tab{
+  font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.5;color:var(--ink-dim);
+  white-space:pre;overflow-x:auto;background:var(--bg-1);border:1px solid var(--line);
+  border-radius:6px;padding:6px 8px;max-height:120px;
+}
+.ov-notes{font-size:12px;color:var(--ink-dim);line-height:1.5;white-space:pre-wrap}
+
+/* drum mini grid */
+.ov-drum{display:flex;flex-direction:column;gap:2px}
+.ov-drum-row{display:flex;align-items:center;gap:4px}
+.ov-drum-lab{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink-faint);width:16px;flex-shrink:0}
+.ov-drum-dots{display:flex;gap:1px;flex:1}
+.ov-drum-dot{flex:1;height:7px;background:var(--bg-3);border-radius:1px;max-width:8px}
+.ov-drum-dot.on{background:var(--ch-color,var(--accent))}
+
+/* actions cell */
+.ov-acts{
+  border-left:1px solid var(--line);background:var(--bg-1);
+  display:flex;flex-direction:column;gap:4px;padding:8px 4px;align-items:center;
+}
+.ov-acts button{
+  background:transparent;border:1px solid var(--line-mid);color:var(--ink-faint);
+  width:22px;height:22px;cursor:pointer;border-radius:5px;font-size:11px;line-height:1;transition:all .1s;
+}
+.ov-acts button:hover{background:var(--bg-2);color:var(--ink)}
+.ov-acts button.toggle-on{background:var(--green);color:#fff;border-color:var(--green)}
+.ov-acts button.del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+
+.ov-row .block-progress{position:absolute;bottom:0;left:0;height:2px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow);z-index:5;border-radius:0 1px 0 0}
+
+/* channel visibility toggles in the header bar */
+.ov-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ov-vis{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ov-vis-chip{
+  display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none;
+  border:1px solid var(--line-mid);background:var(--bg-1);border-radius:20px;
+  padding:3px 9px;font-size:10px;font-weight:500;color:var(--ink-dim);transition:all .1s;
+}
+.ov-vis-chip .sw{width:8px;height:8px;border-radius:50%;background:var(--ch-color,var(--accent))}
+.ov-vis-chip.off{opacity:.45;text-decoration:line-through}
+.ov-vis-chip:hover{border-color:var(--line-strong);color:var(--ink)}
+
+@media(max-width:640px){
+  .ov-gutter{padding:8px 7px}
+  .ov-cell{padding:8px 9px}
+}
+
+
+/* ═══════ OVERVIEW v2 · chords above lyrics + overflow fix ═══════ */
+/* Let columns fit the viewport instead of forcing max-content width
+   (fixes the chord lane spilling / empty-space issue). */
+.ov-grid-wrap{overflow-x:auto}
+.ov-channel-head,.ov-row{min-width:0}
+
+/* Chord lane sits ABOVE the lyrics, aligned to the paragraph width. */
+.ov-lyric-chords{
+  display:flex;flex-direction:column;gap:3px;
+  margin-bottom:9px;padding-bottom:9px;
+  border-bottom:1px dashed var(--line);
+}
+.ov-lc-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px}
+
+/* The lane never breaks the grid: if too many chords, it scrolls in place. */
+.ov-chord-lane{overflow-x:auto;padding-bottom:1px}
+.ov-chord-cell{min-width:30px}
+
+/* Slightly lighter chips when shown over the letra (lead-sheet feel). */
+.ov-lyric-chords .ov-chord-cell{
+  background:transparent;border:none;border-radius:0;
+  border-right:1px solid var(--line);padding:0 4px 2px;align-items:flex-start;
+}
+.ov-lyric-chords .ov-chord-cell:last-child{border-right:none}
+.ov-lyric-chords .ov-chord-cell .nm{font-size:14px;font-weight:600}
+.ov-lyric-chords .ov-chord-cell .bt{font-size:8px}
+.ov-lyric-chords .ov-bar-ticks{margin-top:3px}
+
+/* Lyrics text directly under the chords reads as a verse. */
+.ov-cell .ov-lyric-edit{min-height:32px;font-style:italic}
+
+
+/* ═══════ OVERVIEW v3 · per-line chords + mode toggle ═══════ */
+.ov-mode{flex-shrink:0}
+.ov-mode button{font-size:10px;padding:4px 10px}
+
+/* Lyrics display (merged mode): clickable, lines stacked. */
+.ov-lyrics-disp{cursor:text;display:flex;flex-direction:column;gap:7px}
+.ov-lyrics-disp:hover{outline:1px dashed var(--line-mid);outline-offset:4px;border-radius:6px}
+.ov-ln{position:relative}
+.ov-ln-chords{position:relative;height:19px;margin-bottom:1px}
+.ov-ln-tick{position:absolute;bottom:0;width:1px;height:5px;background:var(--line-mid);opacity:.7}
+.ov-ln-tick.bar{height:9px;background:var(--line-strong);opacity:.9}
+.ov-ln-chord{
+  position:absolute;bottom:4px;transform:translateX(-1px);
+  font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--accent);
+  white-space:nowrap;background:var(--bg-0);padding:0 3px;z-index:2;line-height:1.1;
+}
+.ov-ln-chord .bt{font-size:7px;color:var(--accent-dim);margin-left:1px;font-family:'JetBrains Mono',monospace;vertical-align:super}
+.ov-ln-text{
+  font-family:'Fraunces',serif;font-size:16px;font-weight:300;font-style:italic;
+  line-height:1.5;color:var(--ink);min-height:22px;white-space:pre-wrap;
+}
+.ov-ln-text .empty{color:var(--ink-faint);font-size:13px}
+
+@media(max-width:640px){
+  .ov-ln-chord{font-size:12px}
+  .ov-ln-text{font-size:15px}
+}
+
+
+/* ═══════ READING MODE · lead sheet ═══════ */
+.rd-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.rd-sheet{
+  background:var(--bg-0);border:1px solid var(--line);border-radius:12px;
+  padding:20px 22px;max-height:calc(100vh - 200px);overflow-y:auto;
+}
+.rd-meta{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.rd-meta h3{font-family:'Fraunces',serif;font-weight:300;font-size:20px;color:var(--ink)}
+.rd-meta .rd-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);margin-top:4px}
+.rd-block{margin-bottom:18px}
+.rd-block.muted{opacity:.4}
+.rd-sec{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rd-sec-tag{color:#fff;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:4px}
+.rd-sec-meta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-faint)}
+.rd-line{position:relative;margin-bottom:5px}
+.rd-chordrow{position:relative;height:16px;font-family:'JetBrains Mono',monospace}
+.rd-chord{
+  position:absolute;bottom:0;font-family:'Fraunces',serif;font-weight:600;font-size:13px;
+  color:var(--accent);white-space:nowrap;transform:translateX(-1px);
+}
+.rd-text{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.4;color:var(--ink);white-space:pre-wrap}
+
+.rd-editor{
+  background:var(--bg-0);border:1px solid var(--line);border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden;position:sticky;top:0;
+}
+.rd-ed-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg-1);
+  font-size:11px;color:var(--ink-dim);
+}
+.rd-ed-head code{font-family:'JetBrains Mono',monospace;background:var(--bg-2);padding:1px 4px;border-radius:3px;font-size:10px}
+.rd-ed-actions{display:flex;gap:6px;flex-shrink:0}
+.rd-ed-actions button{
+  background:var(--bg-2);border:1px solid var(--line-mid);color:var(--ink-dim);
+  font-family:'Inter',sans-serif;font-size:11px;font-weight:500;padding:5px 12px;border-radius:7px;cursor:pointer;transition:all .1s;
+}
+.rd-ed-actions button:hover{background:var(--bg-3);color:var(--ink)}
+.rd-ed-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.rd-ed-actions button.primary:hover{background:var(--accent-dim)}
+#rdSource{
+  flex:1;min-height:360px;max-height:calc(100vh - 260px);width:100%;resize:vertical;
+  border:none;outline:none;padding:14px 16px;background:var(--bg-0);color:var(--ink);
+  font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;
+}
+.rd-ed-hint{padding:8px 14px;border-top:1px solid var(--line);background:var(--bg-1);font-size:10px;color:var(--ink-faint);line-height:1.5}
+.rd-ed-hint code{font-family:'JetBrains Mono',monospace;background:var(--bg-2);padding:1px 4px;border-radius:3px}
+
+@media(max-width:860px){
+  .rd-wrap{grid-template-columns:1fr}
+  .rd-editor{position:static}
+  #rdSource{max-height:none;min-height:300px}
+  .rd-sheet{max-height:none}
+}
+
+
+/* ═══════ CHORD LINES (rhythm blocks: organise chords by line) ═══════ */
+.chord-lines-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 10px}
+.chord-lines-toolbar .cl-count{font-size:10px;color:var(--ink-dim)}
+.chord-lines-toolbar .cl-count b{color:var(--ink)}
+.cl-btn{
+  background:var(--bg-1);border:1px solid var(--line-mid);color:var(--ink-dim);
+  font-family:'Inter',sans-serif;font-size:10px;font-weight:500;padding:4px 10px;border-radius:7px;cursor:pointer;transition:all .1s;
+}
+.cl-btn:hover{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-dim)}
+.cl-hint{font-size:9px;color:var(--ink-faint)}
+
+.chord-line-stack{display:flex;flex-direction:column;gap:4px}
+.chord-line{border:1px dashed var(--line);border-radius:8px;padding:2px 4px 4px;background:var(--bg-1)}
+.chord-line-head{display:flex;align-items:center;gap:8px;padding:3px 4px 0}
+.chord-line-label{font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--accent);background:var(--accent-bg);padding:1px 6px;border-radius:4px}
+.chord-line-beats{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-faint)}
+
+/* line-break toggle on each chord slot */
+.chord-break-btn{
+  position:absolute;top:2px;right:2px;z-index:25;
+  width:16px;height:16px;border-radius:4px;border:1px solid var(--line-mid);
+  background:var(--bg-0);color:var(--ink-faint);font-size:10px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;padding:0;transition:all .1s;opacity:.5;
+}
+.chord-slot:hover .chord-break-btn{opacity:1}
+.chord-break-btn:hover{background:var(--bg-2);color:var(--ink)}
+.chord-break-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);opacity:1}
+.chord-slot{padding-top:6px}
+
+
+/* ═══════ PATTERN LINES (drag-reorder + grip) ═══════ */
+.chord-grip{
+  position:absolute;top:2px;left:2px;z-index:25;
+  width:16px;height:16px;border-radius:4px;border:1px solid var(--line-mid);
+  background:var(--bg-0);color:var(--ink-faint);font-size:9px;line-height:1;cursor:grab;
+  display:grid;place-items:center;padding:0;opacity:.45;transition:all .1s;
+}
+.chord-slot:hover .chord-grip{opacity:1}
+.chord-grip:hover{background:var(--bg-2);color:var(--ink)}
+.chord-grip:active{cursor:grabbing}
+.chord-slot.drag-over{outline:2px dashed var(--accent);outline-offset:1px}
+.chord-slot.dragging{opacity:.4}
+.pattern-slots-inner .chord-slot{padding-top:8px}
+
+
+/* ═══════ N-BAR LINE CONTROLS ═══════ */
+.cl-line-del{
+  margin-left:auto;width:18px;height:18px;border-radius:5px;border:1px solid var(--line-mid);
+  background:var(--bg-0);color:var(--ink-faint);font-size:12px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;padding:0;transition:all .1s;
+}
+.cl-line-del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.cl-addline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding:7px 8px;border:1px dashed var(--line-mid);border-radius:8px;background:var(--bg-1)}
+.cl-addline-lbl{font-size:10px;color:var(--ink-dim)}
+.cl-bars-input{
+  width:48px;background:var(--bg-0);border:1px solid var(--line-mid);color:var(--ink);
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 6px;border-radius:6px;outline:none;text-align:center;
+}
+.cl-bars-input:focus{border-color:var(--accent)}
+
 </style>
 </head>
 <body>
+
+<div id="screen-workbench" class="screen">
 <div class="app">
 
   <!-- TOPBAR -->
@@ -707,6 +1350,10 @@ input[type=number]{-moz-appearance:textfield}
       <div class="brand-mark">M</div>
       <div class="brand-name">Muss<small>Song Workbench</small></div>
     </div>
+    <button class="wb-back" id="wbBack" title="Volver a la biblioteca">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg>
+      Biblioteca
+    </button>
     <div class="song-info">
       <div class="info-cell"><label>Title</label><input id="songTitle" type="text" placeholder="Untitled track"></div>
       <div class="info-cell"><label>Artist</label><input id="songArtist" type="text" placeholder="Unknown"></div>
@@ -772,6 +1419,7 @@ input[type=number]{-moz-appearance:textfield}
       <div class="view-tabs">
         <button class="view-tab" data-view="channel">Channel</button>
         <button class="view-tab active" data-view="overview">Overview</button>
+        <button class="view-tab" data-view="reading">Lectura</button>
         <button class="view-tab" data-view="timeline">Timeline</button>
       </div>
     </aside>
@@ -807,9 +1455,123 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
+<!-- /workbench app + its modal live above; close the screen wrapper -->
+</div><!-- #screen-workbench -->
+
+<!-- ════════ LIBRARY SCREEN ════════ -->
+<div id="screen-library" class="screen active">
+  <div class="lib-app">
+    <header class="lib-topbar">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div class="brand-name">Muss<small>Song Workbench</small></div>
+      </div>
+      <div class="lib-search">
+        <div class="lib-search-wrap">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3"/></svg>
+          <input class="lib-search-input" id="libSearch" type="text" placeholder="Buscar canciones, artistas…" autocomplete="off">
+        </div>
+      </div>
+      <div class="lib-top-actions">
+        <button class="action-btn lib-hide-mobile" id="libImportBtn">↓ Importar</button>
+        <button class="action-btn primary" id="libNewBtn">+ Nueva canción</button>
+        <button class="lib-menu-btn" id="libMenuBtn" aria-label="Menu">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="lib-body">
+      <div class="lib-overlay" id="libOverlay"></div>
+      <nav class="lib-sidebar" id="libSidebar">
+        <div class="lib-side-section">
+          <div class="lib-side-label">Biblioteca</div>
+          <div class="lib-nav active" data-nav="all">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="7" height="7" rx="1.5"/><rect x="11" y="3" width="7" height="7" rx="1.5"/><rect x="2" y="12" width="7" height="7" rx="1.5"/><rect x="11" y="12" width="7" height="7" rx="1.5"/></svg>
+            Todas<span class="lib-nav-count" id="cntAll">0</span>
+          </div>
+          <div class="lib-nav" data-nav="recent">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>
+            Recientes<span class="lib-nav-count" id="cntRecent">0</span>
+          </div>
+          <div class="lib-nav" data-nav="favorites">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 16s-7-4.35-7-8.5a4.5 4.5 0 019 0 4.5 4.5 0 019 0C21 11.65 10 16 10 16z"/></svg>
+            Favoritas<span class="lib-nav-count" id="cntFav">0</span>
+          </div>
+        </div>
+        <div class="lib-side-section grow">
+          <div class="lib-side-label">Género</div>
+          <div class="lib-genres" id="libGenres"></div>
+        </div>
+      </nav>
+
+      <main class="lib-content" id="libContent">
+        <div class="lib-toolbar">
+          <div class="lib-title" id="libTitle">Todas las canciones</div>
+          <div class="lib-sort">
+            <span class="lib-sort-label">Ordenar</span>
+            <div class="pick-group" id="libSort">
+              <button class="active" data-sort="artist">Artista</button>
+              <button data-sort="title">Título</button>
+              <button data-sort="genre">Género</button>
+              <button data-sort="bpm">BPM</button>
+            </div>
+          </div>
+          <div class="lib-vtoggle" id="libView">
+            <button class="active" data-view="grid" title="Cuadrícula">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+            </button>
+            <button data-view="list" title="Lista">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="1" y1="4" x2="15" y2="4"/><line x1="1" y1="8" x2="15" y2="8"/><line x1="1" y1="12" x2="15" y2="12"/></svg>
+            </button>
+            <button data-view="table" title="Tabla">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="2" width="14" height="12" rx="1"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="6" y1="6" x2="6" y2="14"/><line x1="11" y1="6" x2="11" y2="14"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="libList"></div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- New-song modal -->
+<div class="modal-mask" id="newSongModal">
+  <div class="modal">
+    <div class="modal-head">Nueva canción</div>
+    <div class="modal-body">
+      <div class="lib-field"><label>Título</label><input type="text" id="ns_title" placeholder="Nombre de la canción"></div>
+      <div class="lib-field"><label>Artista</label><input type="text" id="ns_artist" placeholder="Artista o banda"></div>
+      <div class="lib-field"><label>Género</label>
+        <select id="ns_genre">
+          <option value="">— Sin género —</option>
+          <option value="Rock">Rock</option><option value="Pop">Pop</option><option value="Jazz">Jazz</option>
+          <option value="Metal">Metal</option><option value="Folk">Folk</option><option value="Blues">Blues</option>
+          <option value="Latin">Latin</option><option value="Indie">Indie</option><option value="Country">Country</option>
+          <option value="Other">Otro</option>
+        </select>
+      </div>
+      <div class="lib-field-row">
+        <div class="lib-field"><label>BPM</label><input type="number" id="ns_bpm" value="120" min="20" max="300"></div>
+        <div class="lib-field"><label>Compás</label>
+          <select id="ns_sig"><option>4/4</option><option>3/4</option><option>6/8</option><option>5/4</option><option>7/8</option></select>
+        </div>
+      </div>
+      <div class="lib-field"><label>Link de referencia</label><input type="url" id="ns_link" placeholder="https://youtube.com/…"></div>
+    </div>
+    <div class="modal-foot">
+      <button id="ns_cancel">Cancelar</button>
+      <button class="primary" id="ns_create">Crear canción</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="libImportFile" accept=".json,.muss.json" style="display:none">
+
+
 <script>
 /* ── State ── */
-const STATE={song:{title:'',artist:'',link:'',bpm:120,signature:'4/4',blocks:[],channels:[],progressions:[]},ui:{activeChannelId:null,view:'overview',isPlaying:false,currentBlockIndex:0,currentBeat:0,autoScroll:true,metronomeTimer:null,countIn:1,isCountingIn:false,countInBeatsLeft:0,blockProgress:0}};
+const STATE={song:{title:'',artist:'',link:'',bpm:120,signature:'4/4',blocks:[],channels:[],progressions:[],library:{riffs:[]}},ui:{activeChannelId:null,view:'overview',rhythmTab:'blocks',tabTab:'blocks',isPlaying:false,currentBlockIndex:0,currentBeat:0,autoScroll:true,metronomeTimer:null,countIn:1,isCountingIn:false,countInBeatsLeft:0,blockProgress:0}};
 const CH_COLORS=['#4f6ef7','#2a9d8f','#e05c3a','#c46bb0','#7c69f5','#c08040','#4aab6d','#d4521e'];
 const CH_TYPE_INFO={lyrics:{letter:'L',label:'Lyrics'},lead:{letter:'G',label:'Lead Gtr'},rhythm:{letter:'R',label:'Rhythm'},bass:{letter:'B',label:'Bass'},drums:{letter:'D',label:'Drums'},keys:{letter:'K',label:'Keys'},notes:{letter:'N',label:'Notes'}};
 const SECTION_OPTIONS=['INTRO','VERSE','PRE-CHORUS','CHORUS','BRIDGE','SOLO','INSTRUMENTAL','BREAKDOWN','OUTRO'];
@@ -864,44 +1626,53 @@ function setText(ci,bi,v,k='text'){const b=STATE.song.blocks.find(x=>x.id===bi);
    strings — normalizeChord() upgrades them on read. */
 function normalizeChord(c){
   if(typeof c==='string') return {name:c, beats:sigBeats()};
-  return {name:c.name||'', beats:c.beats||sigBeats()};
+  const o={name:c.name||'', beats:c.beats||sigBeats()};
+  if(c.br)o.br=true;            // line-break AFTER this chord (for syncing with lyric lines)
+  return o;
 }
 function getChords(block,ci){
   const arr=(block.content[ci]?.chords)||[];
   return arr.map(normalizeChord);
 }
 function addChord(ci,bi){const b=STATE.song.blocks.find(x=>x.id===bi);if(!b.content[ci])b.content[ci]={chords:[],notes:''};if(!b.content[ci].chords)b.content[ci].chords=[];b.content[ci].chords=getChords(b,ci);b.content[ci].chords.push({name:'Am',beats:sigBeats()});renderEditor()}
-function updateChord(ci,bi,i,v){const b=STATE.song.blocks.find(x=>x.id===bi);b.content[ci].chords=getChords(b,ci);v=v.trim();if(!v){b.content[ci].chords.splice(i,1);renderEditor()}else{b.content[ci].chords[i].name=v}}
-function setChordBeats(ci,bi,i,delta){
-  const b=STATE.song.blocks.find(x=>x.id===bi);
-  if(!b)return;
-  b.content[ci].chords=getChords(b,ci);
-  const max=b.bars*sigBeats();
-  const cur=b.content[ci].chords[i].beats;
-  const next=clamp(Math.round((cur+delta)*2)/2,0.5,max); // step 1, allow .5 floor
-  b.content[ci].chords[i].beats=next;
-  // Patch only the affected slot's flex-grow + its beats label, plus the fill row.
-  const slots=document.querySelector(`.chord-slots[data-ch="${ci}"][data-block="${bi}"]`);
-  if(slots){
-    const slot=slots.querySelector(`.chord-slot[data-idx="${i}"]`);
-    if(slot){
-      slot.style.flexGrow=next;
-      const lbl=slot.querySelector('.chord-beats');
-      if(lbl)lbl.textContent=next+'b';
-      // rebind the +/- buttons keep working with current value (delta is constant, so no rebind needed)
-    }
-    // update fill indicator
-    const chords=b.content[ci].chords;
-    const used=chords.reduce((s,c)=>s+c.beats,0);
-    const fillEl=document.querySelector(`.chord-fill[data-fill="${ci}|${bi}"]`);
-    if(fillEl){
-      fillEl.className='chord-fill '+(used===max?'ok':(used>max?'over':'under'));
-      fillEl.textContent=`${used} / ${max} beats filled${used>max?' (over!)':used<max?' ('+(max-used)+' free)':''}`;
-    }
-  }else{
-    renderEditor();
-  }
+/* Group a flat chord array into lines, breaking after any chord flagged br. */
+function chordLines(chords){
+  const lines=[[]];
+  chords.forEach((c,i)=>{ lines[lines.length-1].push({c,i}); if(c.br && i<chords.length-1) lines.push([]); });
+  return lines;
 }
+function blockLyricLineCount(block){
+  const ly=getLyricsChannel();
+  const t=block.content[ly.id]?.text||'';
+  return t.length? t.split('\n').length : 1;
+}
+/* Toggle a line break after chord i. */
+function toggleChordBreak(ci,bi,i){
+  const b=STATE.song.blocks.find(x=>x.id===bi);if(!b)return;
+  const ch=getChords(b,ci); if(!ch[i])return;
+  if(ch[i].br)delete ch[i].br; else ch[i].br=true;
+  b.content[ci].chords=ch; renderEditor();
+}
+function clearChordBreaks(ci,bi){
+  const b=STATE.song.blocks.find(x=>x.id===bi);if(!b)return;
+  const ch=getChords(b,ci); ch.forEach(c=>delete c.br);
+  b.content[ci].chords=ch; renderEditor();
+}
+/* Distribute chords into as many lines as the block's lyrics, setting breaks. */
+function syncChordsToLyrics(ci,bi){
+  const b=STATE.song.blocks.find(x=>x.id===bi);if(!b)return;
+  const ch=getChords(b,ci); const N=blockLyricLineCount(b);
+  if(!ch.length){flash('No hay acordes');return}
+  ch.forEach(c=>delete c.br);
+  for(let k=1;k<N;k++){
+    const idx=Math.round(k*ch.length/N)-1;
+    if(idx>=0 && idx<ch.length-1) ch[idx].br=true;
+  }
+  b.content[ci].chords=ch; renderEditor();
+  flash(`Acordes repartidos en ${N} línea${N>1?'s':''}`);
+}
+
+function updateChord(ci,bi,i,v){const b=STATE.song.blocks.find(x=>x.id===bi);b.content[ci].chords=getChords(b,ci);v=v.trim();if(!v){b.content[ci].chords.splice(i,1);renderEditor()}else{b.content[ci].chords[i].name=v}}
 
 /* ── Chord progressions (reusable patterns with alias) ── */
 function ensureProgs(){if(!STATE.song.progressions)STATE.song.progressions=[]}
@@ -910,6 +1681,13 @@ function saveProgression(ci,bi){
   const b=STATE.song.blocks.find(x=>x.id===bi);
   const chords=getChords(b,ci);
   if(!chords.length){flash('No chords to save');return}
+  // Duplicate check: same chord names AND same beats in same order
+  const fingerprint=chords.map(c=>c.name+'|'+c.beats).join(',');
+  const dup=STATE.song.progressions.find(p=>{
+    const fp=p.chords.map(c=>(c.name||c)+'|'+(c.beats||sigBeats())).join(',');
+    return fp===fingerprint;
+  });
+  if(dup){flash('Pattern already exists as "'+dup.name+'"');return}
   const name=prompt('Name this chord pattern (alias):','Pattern '+(STATE.song.progressions.length+1));
   if(name===null)return;
   STATE.song.progressions.push({id:uid(),name:name.trim()||('Pattern '+(STATE.song.progressions.length+1)),chords:JSON.parse(JSON.stringify(chords))});
@@ -922,13 +1700,29 @@ function applyProgression(ci,bi,progId){
   if(!prog)return;
   const b=STATE.song.blocks.find(x=>x.id===bi);
   if(!b.content[ci])b.content[ci]={chords:[],notes:''};
+  // Track applied patterns on the block (max 2)
+  if(!b.content[ci].appliedPatterns)b.content[ci].appliedPatterns=[];
+  if(!b.content[ci].appliedPatterns.includes(progId)){
+    if(b.content[ci].appliedPatterns.length>=2){flash('Max 2 patterns per block');return}
+    b.content[ci].appliedPatterns.push(progId);
+  }
   b.content[ci].chords=JSON.parse(JSON.stringify(prog.chords));
   flash('Applied "'+prog.name+'"');
+  renderEditor();
+}
+function removePatternFromBlock(ci,bi,progId){
+  const b=STATE.song.blocks.find(x=>x.id===bi);if(!b||!b.content[ci])return;
+  if(!b.content[ci].appliedPatterns)b.content[ci].appliedPatterns=[];
+  b.content[ci].appliedPatterns=b.content[ci].appliedPatterns.filter(id=>id!==progId);
   renderEditor();
 }
 function deleteProgression(progId){
   ensureProgs();
   STATE.song.progressions=STATE.song.progressions.filter(p=>p.id!==progId);
+  // Also remove from any block that had it applied
+  STATE.song.blocks.forEach(b=>Object.values(b.content).forEach(c=>{
+    if(c.appliedPatterns)c.appliedPatterns=c.appliedPatterns.filter(id=>id!==progId);
+  }));
   renderEditor();
 }
 function renameProgression(progId){
@@ -938,11 +1732,327 @@ function renameProgression(progId){
   const n=prompt('Rename pattern:',p.name);
   if(n!==null){p.name=n.trim()||p.name;renderEditor()}
 }
+
+/* ── Chord drag-to-resize (replaces +/- buttons) ── */
+function bindChordDrag(ci,bi){document.querySelectorAll(`.chord-slots[data-ch="${ci}"][data-block="${bi}"]`).forEach(bindChordResizeGeneric)}
+function rhythmTabsHTML(ch){
+  const tabs=[['blocks','Blocks'],['patterns','Patterns'],['chords','Chords']];
+  return`<div class="rhythm-tabs">${tabs.map(([k,lbl])=>`<button class="rhythm-tab${STATE.ui.rhythmTab===k?' active':''}" onclick="setRhythmTab('${k}')">${lbl}</button>`).join('')}</div>`;
+}
+function setRhythmTab(tab){STATE.ui.rhythmTab=tab;renderEditor()}
+
+/* ── Pattern catalog ── */
+/* Normalize a pattern's chords, preserving line breaks (br). */
+function progChords(prog){
+  return (prog.chords||[]).map(c=> typeof c==='string'
+    ? {name:c,beats:sigBeats()}
+    : {name:c.name||'',beats:c.beats||sigBeats(),...(c.br?{br:true}:{})});
+}
+function progChordLines(chords){
+  const lines=[[]];
+  chords.forEach((c,i)=>{lines[lines.length-1].push({c,i});if(c.br&&i<chords.length-1)lines.push([])});
+  return lines;
+}
+/* When a pattern's line structure changes, mirror the breaks onto any block
+   that has this pattern applied (so Overview/Lectura reflect it). */
+function propagateProgBreaks(progId){
+  const p=STATE.song.progressions.find(x=>x.id===progId);if(!p)return;
+  STATE.song.blocks.forEach(b=>Object.values(b.content).forEach(c=>{
+    if(c.appliedPatterns&&c.appliedPatterns.includes(progId)&&Array.isArray(c.chords)&&c.chords.length===p.chords.length){
+      c.chords.forEach((cc,k)=>{ if(typeof cc==='string')return; if(p.chords[k]&&p.chords[k].br)cc.br=true; else delete cc.br; });
+    }
+  }));
+}
+/* Toggle a line break after chord i — enforcing a minimum of 1 bar per line. */
+function toggleProgBreak(progId,i){
+  ensureProgs();
+  const p=STATE.song.progressions.find(x=>x.id===progId);if(!p||!p.chords[i])return;
+  const bpb=sigBeats();
+  const ch=p.chords;
+  if(ch[i].br){delete ch[i].br;}
+  else{
+    let startIdx=0;for(let k=i-1;k>=0;k--){if(ch[k].br){startIdx=k+1;break}}
+    const lineBeats=ch.slice(startIdx,i+1).reduce((s,c)=>s+(c.beats||bpb),0);
+    let endIdx=ch.length-1;for(let k=i+1;k<ch.length;k++){if(ch[k].br){endIdx=k;break}}
+    const nextBeats=ch.slice(i+1,endIdx+1).reduce((s,c)=>s+(c.beats||bpb),0);
+    if(lineBeats<bpb || (i<ch.length-1 && nextBeats<bpb)){flash('Cada línea debe tener al menos 1 compás');return}
+    ch[i].br=true;
+  }
+  propagateProgBreaks(progId);renderEditor();
+}
+/* Auto-group: break into lines of (at least) one bar each. */
+function autoBarLines(progId){
+  ensureProgs();
+  const p=STATE.song.progressions.find(x=>x.id===progId);if(!p)return;
+  const bpb=sigBeats();let acc=0;
+  p.chords.forEach(c=>{if(typeof c!=='string')delete c.br});
+  p.chords.forEach((c,i)=>{const bt=(c.beats||bpb);acc+=bt;if(acc>=bpb-1e-6 && i<p.chords.length-1){if(typeof c!=='string')c.br=true;acc=0}});
+  propagateProgBreaks(progId);renderEditor();
+  flash('Líneas de 1 compás');
+}
+function clearProgBreaks(progId){
+  ensureProgs();
+  const p=STATE.song.progressions.find(x=>x.id===progId);if(!p)return;
+  p.chords.forEach(c=>{if(typeof c!=='string')delete c.br});
+  propagateProgBreaks(progId);renderEditor();
+}
+/* Reorder chords within a pattern (drag-and-drop). br travels with the chord. */
+function moveProgChord(progId,from,to){
+  ensureProgs();
+  const p=STATE.song.progressions.find(x=>x.id===progId);if(!p||from===to||from==null||to==null)return;
+  const arr=p.chords;if(from<0||from>=arr.length)return;
+  const [m]=arr.splice(from,1);
+  let t=to>from?to-1:to;t=Math.max(0,Math.min(arr.length,t));
+  arr.splice(t,0,m);
+  propagateProgBreaks(progId);renderEditor();
+}
+
+function renderPatternCatalog(ch,cv){
+  ensureProgs();cv.innerHTML='';
+  const t=document.createElement('div');t.innerHTML=rhythmTabsHTML(ch);cv.appendChild(t.firstElementChild);
+  const wrap=document.createElement('div');wrap.className='pattern-catalog';
+  if(!STATE.song.progressions.length){
+    wrap.innerHTML='<div class="pattern-catalog-empty">No patterns saved yet.<br>Go to <b>Blocks</b> and click <b>★ Save as pattern</b> on any chord progression.</div>';
+    cv.appendChild(wrap);return;
+  }
+  const grid=document.createElement('div');grid.className='pattern-grid';const bpb=sigBeats();
+  STATE.song.progressions.forEach(prog=>{
+    const ref={type:'prog',progId:prog.id};
+    const chords=progChords(prog);
+    const totalBeats=chords.reduce((s,c)=>s+c.beats,0);
+    const numBars=Math.max(1,Math.round(totalBeats/bpb));
+    const lines=chordsToLines(chords);
+    const stack=renderChordLineStack(ref,chords);
+    const card=document.createElement('div');card.className='pattern-card';
+    card.innerHTML=`
+      <div class="pattern-card-head">
+        <input class="pattern-card-name" value="${escapeHTML(prog.name)}" spellcheck="false" onblur="renameProgById('${prog.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()" title="Click to rename">
+        <span style="font-size:9px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;white-space:nowrap">${chords.length} chord${chords.length!==1?'s':''} · ${totalBeats} beats · ${numBars} bar${numBars!==1?'s':''} · ${lines.length} línea${lines.length!==1?'s':''}</span>
+        <button class="pattern-card-del" onclick="deleteProgression('${prog.id}')" title="Delete">×</button>
+      </div>
+      <div class="pattern-card-body">
+        <div class="chord-lines-toolbar">
+          <button class="cl-btn" onclick="gcAutoBars('${refTok(ref)}')" title="Una línea por compás">⊞ 1 compás/línea</button>
+          <button class="cl-btn" onclick="gcClear('${refTok(ref)}')" title="Unir todo en una línea">⥶ Unir en 1</button>
+          <span class="cl-hint">↵ corta línea · ⠿ arrastrá para mover de línea</span>
+        </div>
+        ${stack}
+        <div class="chord-fill under" id="pfill_${prog.id}" style="margin:6px 0 10px">${totalBeats} beats total</div>
+        <div class="pattern-card-actions">
+          <button class="pattern-apply-btn" onclick="applyPatternToBlock('${ch.id}','${prog.id}')">Apply to block…</button>
+          <button class="pattern-dup-btn" onclick="duplicatePattern('${prog.id}')">⧉ Duplicate &amp; edit</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);cv.appendChild(wrap);
+  requestAnimationFrame(()=>{document.querySelectorAll('.chord-slots[data-prog]').forEach(bindChordResizeGeneric);bindChordDnDAll()});
+}
+function renameProgById(progId,name){ensureProgs();const p=STATE.song.progressions.find(x=>x.id===progId);if(p&&name.trim())p.name=name.trim()}
+
+/* Edit chord name in pattern catalog */
+function updateProgChord(progId,idx,name){
+  ensureProgs();
+  const p=STATE.song.progressions.find(x=>x.id===progId);
+  if(!p)return;
+  name=name.trim();
+  if(!name){p.chords.splice(idx,1);}
+  else{if(!p.chords[idx])return;p.chords[idx].name=name;}
+  // Update meta label
+  const slotsEl=document.getElementById('pslots_'+progId);
+  const fillEl=document.getElementById('pfill_'+progId);
+  if(!name&&slotsEl){
+    // Re-render the card by refreshing the pattern catalog view
+    renderEditor();return;
+  }
+  if(fillEl){
+    const total=p.chords.reduce((s,c)=>s+(c.beats||sigBeats()),0);
+    fillEl.textContent=total+' beats total';
+    const metaEl=slotsEl?.closest('.pattern-card-body')?.querySelector('.pattern-meta');
+    if(metaEl)metaEl.textContent=p.chords.length+' chord'+(p.chords.length!==1?'s':'')+' · '+total+' beats';
+  }
+}
+
+/* Add a chord to a pattern directly from the catalog */
+function addProgChord(progId){
+  ensureProgs();
+  const p=STATE.song.progressions.find(x=>x.id===progId);
+  if(!p)return;
+  p.chords.push({name:'Am',beats:sigBeats()});
+  renderEditor();
+}
+
+/* Duplicate a pattern and save as new — requires at least one change (checked on save) */
+function duplicatePattern(progId){
+  ensureProgs();
+  const src=STATE.song.progressions.find(x=>x.id===progId);
+  if(!src)return;
+  const name=prompt('Name for the new pattern (must differ from original):',src.name+' (copy)');
+  if(name===null)return;
+  const trimmed=name.trim()||src.name+' (copy)';
+  // Clone chords deep
+  const cloned=JSON.parse(JSON.stringify(src.chords));
+  // Fingerprint check: cloned is identical to source by definition — warn the user
+  // they need to edit it after saving. Duplication always creates a new entry.
+  // If the NAME already exists, reject.
+  if(STATE.song.progressions.some(p=>p.name===trimmed)){
+    flash('A pattern named "'+trimmed+'" already exists');return;
+  }
+  STATE.song.progressions.push({id:uid(),name:trimmed,chords:cloned});
+  flash('Duplicated as "'+trimmed+'" — edit the chords or timings to differentiate');
+  renderEditor();
+}
+
+/* Drag-to-resize for pattern chord slots — mirrors bindChordDrag but for progressions */
+/* Drag-to-resize across each line's container (beats stay within the line). */
+function bindPatternChordDrag(progId){document.querySelectorAll(`.chord-slots[data-prog="${progId}"]`).forEach(bindChordResizeGeneric)}
+
+function applyPatternToBlock(ci,progId){
+  ensureProgs();
+  if(!STATE.song.blocks.length){flash('No blocks to apply to');return}
+  document.getElementById('_patternPicker')?.remove();
+  const box=document.createElement('div');box.id='_patternPicker';
+  box.style.cssText='position:fixed;bottom:60px;right:20px;background:var(--bg-0);border:1px solid var(--line-mid);border-radius:10px;padding:12px;z-index:3000;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:200px;font-family:Inter,sans-serif;font-size:12px';
+  box.innerHTML=`<div style="font-weight:600;margin-bottom:8px;color:var(--ink)">Apply to block:</div>${STATE.song.blocks.map((b,i)=>`<div onclick="doApplyPattern('${ci}','${b.id}','${progId}')" style="padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--ink-dim)" onmouseover="this.style.background='var(--accent-bg)'" onmouseout="this.style.background=''">${String(i+1).padStart(2,'0')} · ${b.section}</div>`).join('')}<div onclick="document.getElementById('_patternPicker')?.remove()" style="margin-top:8px;padding:5px 8px;border-radius:6px;cursor:pointer;color:var(--ink-faint);font-size:11px;border-top:1px solid var(--line)">Cancel</div>`;
+  document.body.appendChild(box);
+  setTimeout(()=>document.addEventListener('click',function h(e){if(!box.contains(e.target)){box.remove();document.removeEventListener('click',h)}},{once:true}),50);
+}
+function doApplyPattern(ci,bi,progId){document.getElementById('_patternPicker')?.remove();applyProgression(ci,bi,progId);STATE.ui.rhythmTab='blocks';renderEditor()}
+
+/* ── Chord catalog (unique chords used across the song) ── */
+function renderChordCatalog(ch,cv){
+  cv.innerHTML='';
+  const t=document.createElement('div');t.innerHTML=rhythmTabsHTML(ch);cv.appendChild(t.firstElementChild);
+  const seen={};
+  STATE.song.blocks.forEach(b=>getChords(b,ch.id).forEach(c=>{const k=c.name||'?';if(!seen[k])seen[k]={name:k,count:0,blocks:[]};seen[k].count++;seen[k].blocks.push(b.section)}));
+  const wrap=document.createElement('div');wrap.className='chord-catalog';
+  const list=Object.values(seen);
+  if(!list.length){wrap.innerHTML='<div class="pattern-catalog-empty">No chords in this channel yet.<br>Add chords in the <b>Blocks</b> view.</div>';cv.appendChild(wrap);return}
+  const grid=document.createElement('div');grid.className='chord-dict-grid';
+  list.sort((a,b)=>b.count-a.count).forEach(e=>{
+    const card=document.createElement('div');card.className='chord-dict-card';
+    card.title=`Used in: ${[...new Set(e.blocks)].join(', ')}`;
+    card.innerHTML=`<span class="chord-dict-name">${escapeHTML(e.name)}</span><span class="chord-dict-count">×${e.count}</span>`;
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);cv.appendChild(wrap);
+}
+
+/* ── Riff Library ── */
+function ensureRiffs(){if(!STATE.song.library)STATE.song.library={riffs:[]};if(!STATE.song.library.riffs)STATE.song.library.riffs=[]}
+
+function tabChannelTabsHTML(ch){
+  return`<div class="tab-channel-tabs"><button class="tab-channel-tab${STATE.ui.tabTab==='blocks'?' active':''}" onclick="setTabTab('blocks')">Blocks</button><button class="tab-channel-tab${STATE.ui.tabTab==='riffs'?' active':''}" onclick="setTabTab('riffs')">Riff Library</button></div>`;
+}
+function setTabTab(tab){STATE.ui.tabTab=tab;renderEditor()}
+
+/* Save current block's tab as a named riff in the library */
+function saveRiff(ci,bi,type){
+  ensureRiffs();
+  const b=STATE.song.blocks.find(x=>x.id===bi);if(!b||!b.content[ci])return;
+  const grid=parseTabGrid(b.content[ci].tab,type);
+  if(!grid.cols.some(col=>Object.values(col).some(v=>v!=='-'))){flash('Tab is empty');return}
+  const name=prompt('Name this riff:','Riff '+(STATE.song.library.riffs.length+1));
+  if(name===null)return;
+  const trimmed=name.trim()||('Riff '+(STATE.song.library.riffs.length+1));
+  STATE.song.library.riffs.push({id:uid(),name:trimmed,type,cols:JSON.parse(JSON.stringify(grid.cols))});
+  flash('Riff "'+trimmed+'" saved');renderEditor();
+}
+
+/* Apply a library riff to a block's tab grid */
+function applyRiff(ci,bi,riffId){
+  ensureRiffs();
+  const riff=STATE.song.library.riffs.find(r=>r.id===riffId);if(!riff)return;
+  const b=STATE.song.blocks.find(x=>x.id===bi);if(!b)return;
+  if(!b.content[ci])b.content[ci]={};
+  b.content[ci].tab={cols:JSON.parse(JSON.stringify(riff.cols))};
+  flash('Applied "'+riff.name+'"');renderEditor();
+}
+
+function deleteRiff(riffId){
+  ensureRiffs();
+  STATE.song.library.riffs=STATE.song.library.riffs.filter(r=>r.id!==riffId);
+  renderEditor();
+}
+function renameRiff(riffId){
+  ensureRiffs();
+  const r=STATE.song.library.riffs.find(x=>x.id===riffId);if(!r)return;
+  const n=prompt('Rename riff:',r.name);
+  if(n!==null){r.name=n.trim()||r.name;renderEditor()}
+}
+function duplicateRiff(riffId){
+  ensureRiffs();
+  const src=STATE.song.library.riffs.find(x=>x.id===riffId);if(!src)return;
+  const name=prompt('Name for the duplicated riff:',src.name+' (copy)');
+  if(name===null)return;
+  const trimmed=name.trim()||src.name+' (copy)';
+  if(STATE.song.library.riffs.some(r=>r.name===trimmed)){flash('A riff named "'+trimmed+'" already exists');return}
+  STATE.song.library.riffs.push({id:uid(),name:trimmed,type:src.type,cols:JSON.parse(JSON.stringify(src.cols))});
+  flash('Duplicated as "'+trimmed+'"');renderEditor();
+}
+
+/* Render the riff catalog view for a lead/bass channel */
+function renderRiffCatalog(ch,cv){
+  ensureRiffs();cv.innerHTML='';
+  const tt=tabType(ch);
+  const tabsDiv=document.createElement('div');tabsDiv.innerHTML=tabChannelTabsHTML(ch);cv.appendChild(tabsDiv.firstElementChild);
+  const wrap=document.createElement('div');wrap.className='riff-catalog';
+  // Filter riffs matching this channel's type
+  const riffs=STATE.song.library.riffs.filter(r=>r.type===tt);
+  if(!riffs.length){
+    wrap.innerHTML=`<div class="riff-catalog-empty">No riffs saved yet.<br>Go to <b>Blocks</b>, edit a tab, then click <b>★ Save as riff</b>.</div>`;
+    cv.appendChild(wrap);return;
+  }
+  const grid=document.createElement('div');grid.className='riff-grid';
+  riffs.forEach(riff=>{
+    const labels=tabStringSet(tt);
+    const cols=riff.cols||[];
+    // Build text preview
+    const preview=labels.map(l=>l+'|'+cols.map(c=>c[l]||'-').join('')+'|').join('\n');
+    const nBars=Math.max(1,Math.round(cols.length/(sigBeats()*4)));
+    const card=document.createElement('div');card.className='riff-card';
+    card.innerHTML=`
+      <div class="riff-card-head">
+        <input class="riff-card-name" value="${escapeHTML(riff.name)}" spellcheck="false"
+          onblur="renameRiffById('${riff.id}',this.value)"
+          onkeydown="if(event.key==='Enter')this.blur()" title="Click to rename">
+        <span class="riff-card-type">${tt}</span>
+        <button class="riff-card-del" onclick="deleteRiff('${riff.id}')" title="Delete">×</button>
+      </div>
+      <div class="riff-card-body">
+        <div class="riff-card-meta">${labels.length} strings · ${cols.length} cols · ${nBars} bar${nBars!==1?'s':''}</div>
+        <div class="riff-card-preview">${escapeHTML(preview)}</div>
+        <div class="riff-card-actions">
+          <button class="riff-apply-btn" onclick="applyRiffToBlock('${ch.id}','${riff.id}','${tt}')">Apply to block…</button>
+          <button class="riff-dup-btn" onclick="duplicateRiff('${riff.id}')">⧉ Duplicate</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);cv.appendChild(wrap);
+}
+
+function renameRiffById(riffId,name){ensureRiffs();const r=STATE.song.library.riffs.find(x=>x.id===riffId);if(r&&name.trim())r.name=name.trim()}
+
+/* Picker: choose which block to apply the riff to */
+function applyRiffToBlock(ci,riffId,type){
+  ensureRiffs();
+  // Filter blocks that have a tab channel matching ci
+  const ch=STATE.song.channels.find(c=>c.id===ci);if(!ch)return;
+  if(!STATE.song.blocks.length){flash('No blocks to apply to');return}
+  document.getElementById('_riffPicker')?.remove();
+  const box=document.createElement('div');box.id='_riffPicker';
+  box.style.cssText='position:fixed;bottom:60px;right:20px;background:var(--bg-0);border:1px solid var(--line-mid);border-radius:10px;padding:12px;z-index:3000;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:200px;font-family:Inter,sans-serif;font-size:12px';
+  box.innerHTML=`<div style="font-weight:600;margin-bottom:8px;color:var(--ink)">Apply to block:</div>${STATE.song.blocks.map((b,i)=>`<div onclick="applyRiff('${ci}','${b.id}','${riffId}');document.getElementById('_riffPicker')?.remove()" style="padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--ink-dim)" onmouseover="this.style.background='var(--accent-bg)'" onmouseout="this.style.background=''">${String(i+1).padStart(2,'0')} · ${b.section}</div>`).join('')}<div onclick="document.getElementById('_riffPicker')?.remove()" style="margin-top:8px;padding:5px 8px;border-radius:6px;cursor:pointer;color:var(--ink-faint);font-size:11px;border-top:1px solid var(--line)">Cancel</div>`;
+  document.body.appendChild(box);
+  setTimeout(()=>document.addEventListener('click',function h(e){if(!box.contains(e.target)){box.remove();document.removeEventListener('click',h)}},{once:true}),50);
+}
+
 function bindDrumCells(ch){if(ch.type!=='drums')return;$$('.drum-cell').forEach(c=>{c.addEventListener('click',()=>{const b=STATE.song.blocks.find(x=>x.id===c.dataset.block);b.content[ch.id].pattern[c.dataset.row][parseInt(c.dataset.i)]^=true;c.classList.toggle('active')})})}
 
 /* ── Drag & Drop ── */
 let dragSrc=null;
-function bindDragAndDrop(){$$('.block,.overview-block').forEach(el=>{
+function bindDragAndDrop(){$$('.block,.overview-block,.ov-row').forEach(el=>{
   const handle=el.querySelector('.block-handle');
   // Only allow drag to start from the handle, so text selection in
   // textareas/inputs isn't hijacked by the drag.
@@ -1139,204 +2249,77 @@ function tabRemoveColumn(containerId){
   refreshTabEditor(containerId);
 }
 
-/* Refresh: patch only changed cells and update cursor — never replaces the element.
-   This preserves focus and makes consecutive keystrokes work cleanly. */
 function refreshTabEditor(containerId){
   const el=document.getElementById(containerId); if(!el)return;
   const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
-  const grid=getTabGridFromBlock(ci,bi,type);
-  const cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:0;
-  const cpb=tabColsPerBar();
-  const bars=Math.max(1,Math.round(grid.cols.length/cpb));
-
-  // If column count changed (insert/remove col), we need a full rebuild.
-  const prevCols=parseInt(el.dataset.cols)||0;
-  if(prevCols!==grid.cols.length){
-    const tmp=document.createElement('div');
-    tmp.innerHTML=renderTabEditor(ci,bi,type,containerId);
-    const newEl=tmp.firstElementChild;
-    el.replaceWith(newEl);
-    bindTabEditor(containerId);
-    fitTabFontAll(ci); // fit ALL tab editors of this channel
-    newEl.focus();
-    return;
-  }
-
-  // Otherwise patch cells in place (fast path — no DOM rebuild, no focus loss).
-  el.dataset.cols=grid.cols.length;
-  el.dataset.bars=bars;
-  grid.labels.forEach(lab=>{
-    grid.cols.forEach((c,x)=>{
-      const cell=el.querySelector(`.tcell[data-col="${x}"][data-lab="${lab}"]`);
-      if(cell){
-        const v=c[lab]||'-';
-        if(cell.textContent!==v) cell.textContent=v;
-        const want=x===cur;
-        if(cell.classList.contains('tcur')!==want) cell.classList.toggle('tcur',want);
-      }
-    });
-  });
-  fitTabFontAll(ci);
+  const html=renderTabEditor(ci,bi,type,containerId);
+  const tmp=document.createElement('div'); tmp.innerHTML=html;
+  el.replaceWith(tmp.firstElementChild);
+  bindTabEditor(containerId);
+  fitTabFont(containerId);
 }
 
-/* Scale font so the longest riff of the channel fits — all blocks share the same width. */
-function fitTabFontAll(ci){
-  // Find the maximum cols across all visible tab editors for this channel
-  const editors=[...document.querySelectorAll(`.tabgrid[data-ci="${ci}"]`)];
-  if(!editors.length)return;
-  const maxCols=Math.max(...editors.map(e=>parseInt(e.dataset.cols)||16));
-  const maxBars=Math.max(...editors.map(e=>parseInt(e.dataset.bars)||1));
-  // compute font size from the widest editor's available width
-  // Use the first editor's clientWidth as reference (they're all same channel column)
-  const w=editors[0].clientWidth-4;
-  const totalChars=maxCols+(maxBars-1)+3;
-  let fs=w/(totalChars*0.6);
-  fs=clamp(fs,4,13);
-  // Apply same font size to all editors of this channel so they align
-  editors.forEach(e=>e.style.fontSize=fs+'px');
-}
-
-/* Keep for compat — routes to fitTabFontAll */
+/* Auto-scale font so all columns fit the width — no horizontal scroll. */
 function fitTabFont(containerId){
   const el=document.getElementById(containerId); if(!el)return;
-  fitTabFontAll(el.dataset.ci);
+  const cols=parseInt(el.dataset.cols)||16;
+  const bars=parseInt(el.dataset.bars)||1;
+  // total chars on a row: label(1) + bar(1) + cols + separators(bars-1) + trailing bar(1)
+  const totalChars=cols+(bars-1)+3;
+  const w=el.clientWidth-4;
+  let fs=w/(totalChars*0.6); // monospace char ≈ 0.6em wide
+  fs=clamp(fs,5,13);
+  el.style.fontSize=fs+'px';
 }
 
 /* Keyboard + click handling for the structured grid. */
-// Pending digit buffer: {containerId -> {digit, col, lab, timer}}
-const TAB_PENDING={};
-
 function bindTabEditor(containerId){
   const el=document.getElementById(containerId); if(!el)return;
   const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
 
-  // Click cell → set cursor + active string
+  // click a cell → place cursor there
   el.querySelectorAll('.tcell').forEach(cell=>{
     cell.addEventListener('mousedown',e=>{
       e.preventDefault();
-      const col=parseInt(cell.dataset.col);
-      TAB_CURSOR[containerId]={col};
-      el.dataset.activeLab=cell.dataset.lab;
+      TAB_CURSOR[containerId]={col:parseInt(cell.dataset.col)};
       el.focus();
-      markCursor(el,col);
+      markCursor(el,parseInt(cell.dataset.col));
     });
   });
 
   el.addEventListener('keydown',e=>{
     const grid=getTabGridFromBlock(ci,bi,type);
-    let cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:0;
-    const n=grid.cols.length;
-    const lab=el.dataset.activeLab||(grid.labels[0]);
-
-    // ── Navigation ──
-    if(e.key==='ArrowLeft'){
+    let cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:grid.cols.length-1;
+    const labels=grid.labels;
+    if(e.key==='ArrowLeft'){e.preventDefault();cur=clamp(cur-1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur};markCursor(el,cur);return;}
+    if(e.key==='ArrowRight'){e.preventDefault();cur=clamp(cur+1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur};markCursor(el,cur);return;}
+    // typing a fret number / technique char: write into the cell on the active string.
+    if(/^[0-9xXhHpPbB/\\~().*]$/.test(e.key)){
       e.preventDefault();
-      cur=clamp(cur-1,0,n-1);
-      TAB_CURSOR[containerId]={col:cur};
-      markCursor(el,cur);
-      return;
-    }
-    if(e.key==='ArrowRight'||e.key===' '){
-      e.preventDefault();
-      cur=clamp(cur+1,0,n-1);
-      TAB_CURSOR[containerId]={col:cur};
-      markCursor(el,cur);
-      return;
-    }
-
-    // ── '-' : push space on active string ──
-    if(e.key==='-'){
-      e.preventDefault();
-      flushPending(containerId,grid,lab); // commit any pending digit first
-      const chars=grid.cols.map(c=>c[lab]||'-');
-      let ri=-1;
-      for(let i=n-1;i>cur;i--){if(chars[i]==='-'){ri=i;break;}}
-      if(ri!==-1){for(let i=ri;i>cur;i--)grid.cols[i][lab]=chars[i-1];grid.cols[cur][lab]='-';}
-      else grid.cols[cur][lab]='-';
-      saveTabGrid(ci,bi,grid);
-      TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
-      refreshTabEditor(containerId);
-      return;
-    }
-
-    // ── Digits: buffer for 2-digit frets (0–24) ──
-    if(/^[0-9]$/.test(e.key)){
-      e.preventDefault();
-      const pend=TAB_PENDING[containerId];
-      if(pend&&pend.col===cur&&pend.lab===lab){
-        // Second digit: combine into 2-digit fret
-        clearTimeout(pend.timer);
-        delete TAB_PENDING[containerId];
-        const combined=pend.digit+e.key;
-        if(grid.cols[cur])grid.cols[cur][lab]=combined;
-        saveTabGrid(ci,bi,grid);
-        TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
-        refreshTabEditor(containerId);
-      } else {
-        // First digit: write immediately, wait 400ms for second digit
-        if(grid.cols[cur])grid.cols[cur][lab]=e.key;
-        saveTabGrid(ci,bi,grid);
-        refreshTabEditor(containerId);
-        // Don't advance yet — wait to see if a second digit follows
-        const timer=setTimeout(()=>{
-          delete TAB_PENDING[containerId];
-          // Now advance cursor
-          TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
-          markCursor(document.getElementById(containerId),clamp(cur+1,0,n-1));
-        },400);
-        TAB_PENDING[containerId]={digit:e.key,col:cur,lab,timer};
-      }
-      return;
-    }
-
-    // ── Technique chars (h p b s x etc.) ──
-    if(/^[xXhHpPbBsS/\\~().*]$/.test(e.key)){
-      e.preventDefault();
-      flushPending(containerId,grid,lab);
+      const lab=el.dataset.activeLab||labels[labels.length-1];
       if(grid.cols[cur]){grid.cols[cur][lab]=e.key;saveTabGrid(ci,bi,grid)}
-      TAB_CURSOR[containerId]={col:clamp(cur+1,0,n-1)};
+      // advance cursor but never past the last column (columns are fixed by bars)
+      TAB_CURSOR[containerId]={col:clamp(cur+1,0,grid.cols.length-1)};
       refreshTabEditor(containerId);
       return;
     }
-
-    // ── Backspace: retrocede cursor, pull left on active string ──
     if(e.key==='Backspace'){
       e.preventDefault();
-      flushPending(containerId,grid,lab);
-      // Move cursor back first
-      const target=clamp(cur-1,0,n-1);
-      // Pull: remove the char at `target`, shift right chars left, '-' at end
-      const chars=grid.cols.map(c=>c[lab]||'-');
-      for(let i=target;i<n-1;i++) grid.cols[i][lab]=chars[i+1];
-      grid.cols[n-1][lab]='-';
+      const lab=el.dataset.activeLab||labels[labels.length-1];
+      if(grid.cols[cur]) grid.cols[cur][lab]='-';
       saveTabGrid(ci,bi,grid);
-      TAB_CURSOR[containerId]={col:target};
-      refreshTabEditor(containerId);
-      return;
-    }
-
-    // ── Delete: clear cell in place, no movement ──
-    if(e.key==='Delete'){
-      e.preventDefault();
-      flushPending(containerId,grid,lab);
-      if(grid.cols[cur]){grid.cols[cur][lab]='-';saveTabGrid(ci,bi,grid)}
+      // step back so repeated backspace clears leftward
+      TAB_CURSOR[containerId]={col:clamp(cur-1,0,grid.cols.length-1)};
       refreshTabEditor(containerId);
       return;
     }
   });
 
+  // track which string-row is active (for typing) by remembering last clicked label
+  el.querySelectorAll('.tcell').forEach(cell=>{
+    cell.addEventListener('mousedown',()=>{ el.dataset.activeLab=cell.dataset.lab; });
+  });
   el.addEventListener('paste',e=>tabPaste(e,containerId));
-}
-
-/* Flush any pending 2-digit buffer immediately (called before ops that would conflict). */
-function flushPending(containerId,grid,lab){
-  const pend=TAB_PENDING[containerId];
-  if(!pend)return;
-  clearTimeout(pend.timer);
-  delete TAB_PENDING[containerId];
-  // already written the first digit; just advance
-  const n=grid?grid.cols.length:999;
-  TAB_CURSOR[containerId]={col:clamp(pend.col+1,0,n-1)};
 }
 
 function markCursor(el,col){
@@ -1370,13 +2353,13 @@ function renderTopBar(){if($('#songTitle').value!==STATE.song.title)$('#songTitl
 function renderChannelsList(){const l=$('#channelsList');l.innerHTML='';STATE.song.channels.forEach(ch=>{const info=CH_TYPE_INFO[ch.type]||CH_TYPE_INFO.notes;const d=document.createElement('div');d.className='channel-item'+(ch.id===STATE.ui.activeChannelId?' active':'');d.style.setProperty('--ch-color',ch.color);d.dataset.channelId=ch.id;d.innerHTML=`<div class="channel-icon">${info.letter}</div><div class="channel-meta"><div class="channel-name">${escapeHTML(ch.name)}</div><div class="channel-type">${info.label}</div></div><button class="channel-mute ${ch.muted?'muted':''}" data-action="mute">${ch.muted?'M':'·'}</button><button class="channel-del" data-action="delete">×</button>`;l.appendChild(d)})}
 
 /* ── Render: Editor dispatch ── */
-function renderEditor(){if(STATE.ui.view==='channel')return renderChannelView();if(STATE.ui.view==='timeline')return renderTimeline();return renderOverview()}
+function renderEditor(){if(STATE.ui.view==='channel')return renderChannelView();if(STATE.ui.view==='timeline')return renderTimeline();if(STATE.ui.view==='reading')return renderReading();return renderOverview()}
 
 /* ── Render: Content by type ── */
 function renderContent(ch,block){const data=block.content[ch.id]||defaultContent(ch.type);switch(ch.type){
 case'lyrics':return`<textarea class="lyric-area" placeholder="Write lyrics here…" oninput="setText('${ch.id}','${block.id}',this.value)">${escapeHTML(data.text||'')}</textarea>`;
 case'rhythm':return renderChordEditor(ch,block,data);
-case'lead':case'bass':{const cid=`tab_${ch.id}_${block.id}`;const tt=tabType(ch);const ns=tt==='bass'?4:6;return`<div class="tab-toolbar"><button class="tab-tool-btn" onclick="tabInsertColumn('${cid}')" title="Inserta columna vacía en cursor (todas las cuerdas)">+ Col</button><button class="tab-tool-btn" onclick="tabRemoveColumn('${cid}')" title="Elimina columna del cursor (todas las cuerdas)">− Col</button><span class="tab-strings-badge">${ns} str · ${block.bars} bar${block.bars>1?'s':''} · ${tabColsPerBar()} pasos/bar</span></div>${renderTabEditor(ch.id,block.id,tt,cid)}<div class="tab-hint">Click cuerda + escribí traste · ← → mover · - espacio con push · Backspace borra+pull · Delete borra en lugar · + Col / − Col columna completa</div>`}
+case'lead':case'bass':{const cid=`tab_${ch.id}_${block.id}`;const tt=tabType(ch);const ns=tt==='bass'?4:6;return`<div class="tab-toolbar"><button class="tab-tool-btn" onclick="saveRiff('${ch.id}','${block.id}','${tt}')" title="Save this tab as a reusable riff">★ Save as riff</button><span class="tab-strings-badge">${ns} strings · ${block.bars} bar${block.bars>1?'s':''} · ${tabColsPerBar()} steps/bar</span></div>${renderTabEditor(ch.id,block.id,tt,cid)}<div class="tab-hint">Click a cell, type fret numbers · ← → move · | marks each bar · Paste auto-fits to ${ns} strings</div>`}
 case'drums':return renderDrumGrid(ch,block,data);
 default:return`<textarea class="notes-area" placeholder="Notes…" oninput="setText('${ch.id}','${block.id}',this.value)">${escapeHTML(data.text||'')}</textarea>`}}
 
@@ -1386,50 +2369,33 @@ default:return`<textarea class="notes-area" placeholder="Notes…" oninput="setT
    to apply saved patterns. */
 function renderChordEditor(ch,block,data){
   ensureProgs();
+  const ref={type:'block',ci:ch.id,bi:block.id};
   const chords=getChords(block,ch.id);
   const totalBeats=block.bars*sigBeats();
   const usedBeats=chords.reduce((s,c)=>s+c.beats,0);
-  const bpb=sigBeats();
 
-  // Pattern bar (save current / apply saved)
-  let patternBar=`<div class="chord-patterns">
-    <button class="cp-save" onclick="saveProgression('${ch.id}','${block.id}')" title="Save these chords as a reusable pattern">★ Save as pattern</button>`;
-  if(STATE.song.progressions.length){
-    patternBar+=`<span class="cp-label">Apply:</span><div class="cp-chips">`;
-    STATE.song.progressions.forEach(p=>{
-      const preview=p.chords.map(normalizeChord).map(c=>c.name).join(' ');
-      patternBar+=`<span class="cp-chip" title="${escapeHTML(preview)}"><span class="cp-chip-name" onclick="applyProgression('${ch.id}','${block.id}','${p.id}')">${escapeHTML(p.name)}</span><span class="cp-chip-edit" onclick="renameProgression('${p.id}')" title="Rename">✎</span><span class="cp-chip-del" onclick="deleteProgression('${p.id}')" title="Delete pattern">×</span></span>`;
-    });
-    patternBar+=`</div>`;
-  }
+  // Pattern bar (save / apply reusable progressions)
+  const applied=(data.appliedPatterns||[]).filter(id=>STATE.song.progressions.find(p=>p.id===id));
+  const available=STATE.song.progressions.filter(p=>!applied.includes(p.id));
+  let patternBar=`<div class="chord-patterns"><button class="cp-save" onclick="saveProgression('${ch.id}','${block.id}')" title="Save these chords as a reusable pattern">★ Save as pattern</button>`;
+  if(applied.length){applied.forEach(pid=>{const p=STATE.song.progressions.find(x=>x.id===pid);if(!p)return;patternBar+=`<span class="cp-chip"><span class="cp-chip-name" onclick="applyProgression('${ch.id}','${block.id}','${pid}')" title="Re-apply">${escapeHTML(p.name)}</span><span class="cp-chip-edit" onclick="renameProgression('${pid}')" title="Rename pattern">✎</span><span class="cp-chip-del" onclick="removePatternFromBlock('${ch.id}','${block.id}','${pid}')" title="Remove from block">×</span></span>`})}
+  if(applied.length<2&&available.length){patternBar+=`<select class="cp-select" onchange="if(this.value){applyProgression('${ch.id}','${block.id}',this.value);this.value=''}"><option value="">+ Apply pattern…</option>`;available.forEach(p=>{const preview=p.chords.map(normalizeChord).map(c=>c.name).join(' ');patternBar+=`<option value="${p.id}" title="${escapeHTML(preview)}">${escapeHTML(p.name)}</option>`});patternBar+=`</select>`}
+  else if(applied.length>=2){patternBar+=`<span class="cp-label" style="color:var(--ink-faint);font-size:9px">max 2 patterns</span>`}
   patternBar+=`</div>`;
 
-  // Bar-by-bar timeline of chords. We pack chords into bars by beats.
-  let timeline=`<div class="chord-timeline" style="--total-beats:${totalBeats}">`;
-  // bar dividers as background grid
-  timeline+=`<div class="chord-bars-bg">`;
-  for(let b=0;b<block.bars;b++) timeline+=`<div class="chord-bar-cell" style="flex:${bpb}"><span class="chord-bar-num">${b+1}</span></div>`;
-  timeline+=`</div>`;
-  // chord slots, proportional widths
-  timeline+=`<div class="chord-slots" data-ch="${ch.id}" data-block="${block.id}">`;
-  chords.forEach((c,i)=>{
-    timeline+=`<div class="chord-slot" data-idx="${i}" style="flex-grow:${c.beats};flex-shrink:1;flex-basis:0">
-      <div class="chord-name" contenteditable onblur="updateChord('${ch.id}','${block.id}',${i},this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${escapeHTML(c.name)}</div>
-      <div class="chord-dur">
-        <button onclick="setChordBeats('${ch.id}','${block.id}',${i},-1)" title="Shorten">−</button>
-        <span class="chord-beats">${c.beats}b</span>
-        <button onclick="setChordBeats('${ch.id}','${block.id}',${i},1)" title="Lengthen">+</button>
-      </div>
-    </div>`;
-  });
-  timeline+=`<button class="chord-add-slot" onclick="addChord('${ch.id}','${block.id}')" title="Add chord">+</button>`;
-  timeline+=`</div></div>`;
+  const lyCount=blockLyricLineCount(block);
+  const lineCtrl=`<div class="chord-lines-toolbar">
+    <span class="cl-count">Líneas: <b>${chordsToLines(chords).length}</b></span>
+    <button class="cl-btn" onclick="syncChordsToLyrics('${ch.id}','${block.id}')" title="Repartir en ${lyCount} línea(s), igual que la letra">⇋ Sincronizar con letra (${lyCount})</button>
+    <button class="cl-btn" onclick="gcAutoBars('${refTok(ref)}')" title="Una línea por compás">⊞ 1 compás/línea</button>
+    <button class="cl-btn" onclick="gcClear('${refTok(ref)}')" title="Unir todo en una línea">⥶ Unir en 1</button>
+    <span class="cl-hint">↵ corta línea · ⠿ arrastrá para mover de línea</span>
+  </div>`;
 
-  // fill indicator
+  const stack=renderChordLineStack(ref,chords);
   const fillClass=usedBeats===totalBeats?'ok':(usedBeats>totalBeats?'over':'under');
   const fill=`<div class="chord-fill ${fillClass}" data-fill="${ch.id}|${block.id}">${usedBeats} / ${totalBeats} beats filled${usedBeats>totalBeats?' (over!)':usedBeats<totalBeats?' ('+(totalBeats-usedBeats)+' free)':''}</div>`;
-
-  return patternBar+timeline+fill+`<textarea class="notes-area" placeholder="Strumming pattern, dynamics, notes…" oninput="setText('${ch.id}','${block.id}',this.value,'notes')">${escapeHTML(data.notes||'')}</textarea>`;
+  return patternBar+lineCtrl+stack+fill+`<textarea class="notes-area" placeholder="Strumming pattern, dynamics, notes…" oninput="setText('${ch.id}','${block.id}',this.value,'notes')">${escapeHTML(data.notes||'')}</textarea>`;
 }
 
 function renderDrumGrid(ch,block,data){const rows=['HH','SN','KK','TM','CY'],bpb=sigBeats(),sub=4,total=block.bars*bpb*sub,p=data.pattern||(data.pattern={});let h='<div class="drum-grid">';rows.forEach(r=>{if(!p[r])p[r]=new Array(total).fill(false);while(p[r].length<total)p[r].push(false);h+=`<div class="drum-row"><div class="drum-label">${r}</div><div class="drum-cells" style="grid-template-columns:repeat(${total},1fr)">`;for(let i=0;i<total;i++)h+=`<div class="drum-cell${p[r][i]?' active':''}${i%sub===0?' beat-marker':''}" data-row="${r}" data-i="${i}" data-ch="${ch.id}" data-block="${block.id}"></div>`;h+='</div></div>'});return h+'</div>'}
@@ -1440,7 +2406,18 @@ function renderChannelView(){
   if(!ch)return;
   const info=CH_TYPE_INFO[ch.type];
   $('#editorHead').innerHTML=`<div class="editor-title" style="--ch-color:${ch.color}"><span class="editor-title-tag">${info.label}</span><input type="text" value="${escapeHTML(ch.name)}" onchange="renameChannel('${ch.id}',this.value)"></div><button class="add-block-btn" data-action="add-block">+ Add Block</button>`;
-  const cv=$('#canvas');cv.className='canvas';
+  const cv=$('#canvas');cv.className='canvas';cv.style.cssText='';
+  // Rhythm channels: route to catalog sub-views
+  if(ch.type==='rhythm'){
+    if(!STATE.ui.rhythmTab) STATE.ui.rhythmTab='blocks';
+    if(STATE.ui.rhythmTab==='patterns') return renderPatternCatalog(ch,cv);
+    if(STATE.ui.rhythmTab==='chords') return renderChordCatalog(ch,cv);
+  }
+  // Lead/bass channels: route to riff catalog
+  if(ch.type==='lead'||ch.type==='bass'){
+    if(!STATE.ui.tabTab) STATE.ui.tabTab='blocks';
+    if(STATE.ui.tabTab==='riffs') return renderRiffCatalog(ch,cv);
+  }
   if(!STATE.song.blocks.length){cv.innerHTML='<div class="empty-state"><h4>No blocks yet</h4><p>Click + Add Block to start.</p></div>';return}
   cv.innerHTML='';
   // Lyrics master panel when this is lyrics channel
@@ -1452,6 +2429,10 @@ function renderChannelView(){
     ta.value=STATE.song.blocks.map(b=>(b.content[ch.id]?.text||'').trim()).filter(Boolean).join('\n\n');
     updateLyricsStats(ta.value);ta.addEventListener('input',()=>updateLyricsStats(ta.value));
   }
+  // Rhythm channel: sub-tab bar (Blocks | Patterns | Chords)
+  if(ch.type==='rhythm'){const t=document.createElement('div');t.innerHTML=rhythmTabsHTML(ch);cv.appendChild(t.firstElementChild)}
+  // Lead/bass channel: sub-tab bar (Blocks | Riff Library)
+  if(ch.type==='lead'||ch.type==='bass'){const t=document.createElement('div');t.innerHTML=tabChannelTabsHTML(ch);cv.appendChild(t.firstElementChild)}
   cv.appendChild(makeInsertZone(0));
   STATE.song.blocks.forEach((block,idx)=>{
     const cur=STATE.ui.isPlaying&&idx===STATE.ui.currentBlockIndex;
@@ -1463,10 +2444,10 @@ function renderChannelView(){
     cv.appendChild(d);cv.appendChild(makeInsertZone(idx+1));
   });
   bindDragAndDrop();bindDrumCells(ch);
+  if(ch.type==='rhythm') requestAnimationFrame(()=>{STATE.song.blocks.forEach(bl=>bindChordDrag(ch.id,bl.id));bindChordDnDAll();});
   if(ch.type==='lead'||ch.type==='bass'){
     requestAnimationFrame(()=>{
-      $$('.tabgrid').forEach(g=>bindTabEditor(g.id));
-      fitTabFontAll(ch.id);
+      $$('.tabgrid').forEach(g=>{bindTabEditor(g.id);fitTabFont(g.id)});
     });
   }
 }
@@ -1483,76 +2464,278 @@ function getLyricsChannel(){
    - Backspace at the very start of an empty/short block merges into the previous one.
    - Pasting multi-section text auto-splits into blocks.
    Detail (chords, tabs, drums) lives in each channel's own view. */
-function renderOverview(){
-  const lyricsCh=getLyricsChannel();
-  const rhythmCh=STATE.song.channels.find(c=>c.type==='rhythm');
-
-  $('#editorHead').innerHTML=`<div class="editor-title"><span class="editor-title-tag">Overview</span><h2>${escapeHTML(STATE.song.title)||'Untitled'}</h2></div><div style="display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:var(--ink-faint)" id="ovStats"></span><button class="add-block-btn" data-action="add-block">+ Add Block</button></div>`;
-  const cv=$('#canvas');cv.className='canvas';
-  cv.innerHTML='';
-
-  // Always-present hint strip
-  const hint=document.createElement('div');
-  hint.className='ov-hint';
-  hint.innerHTML=`<i style="font-style:normal;opacity:.7">✎</i> Type lyrics directly — a blank line splits into a new time-block. Backspace on an empty block merges it up. Open a channel for chords, tabs & drums.`;
-  cv.appendChild(hint);
-
-  if(!STATE.song.blocks.length){
-    // Seed one empty block so the user can start typing immediately
-    addBlock('VERSE',4);
-  }
-
-  cv.appendChild(makeInsertZone(0));
-  STATE.song.blocks.forEach((block,i)=>{
-    cv.appendChild(buildOverviewBlock(block,i,lyricsCh,rhythmCh));
-    cv.appendChild(makeInsertZone(i+1));
+/* ── Render: Overview (columnar — one column per channel) ──
+   Each block is a row; every visible channel gets its own column
+   so lyrics, chords, tabs and drums line up side by side.
+   Repeated channel content (identical chords/tabs, or a saved
+   pattern) is collapsed into a "repeat" badge instead of redrawing,
+   while still respecting each block's bar/beat length.            */
+/* ── Render: Overview (columnar, chords ABOVE lyrics) ──────
+   Layout: each block is a row. The Vocals column shows the chord
+   progression as a time-proportional lane ABOVE the lyric lines
+   (lead-sheet style), so chords sit over the letra and span the
+   same horizontal width as the paragraph. Rhythm channels are
+   therefore merged into the lyrics column instead of taking their
+   own column. Other instruments (lead/bass tab, drums…) keep a
+   column each. Repeated chords/tabs collapse into a ↻ badge.   */
+/* ── Render: Overview (per-line chords + merge/separate) ───
+   Two modes (toggle in the toolbar):
+   • FUSIONADO  → chords sit ABOVE each lyric line, positioned by the
+                  beat where they fall (each line read as a time-bar).
+   • SEPARADO   → rhythm (chords) and lyrics get their own columns.
+   Chords/tabs repeated across blocks collapse into a ↻ badge.      */
+function visibleOverviewChannels(){
+  const hidden=STATE.ui.hiddenChannels||(STATE.ui.hiddenChannels=[]);
+  return STATE.song.channels.filter(c=>!hidden.includes(c.id));
+}
+function ovMerged(){ if(STATE.ui.ovMerge===undefined)STATE.ui.ovMerge=false; return STATE.ui.ovMerge; }
+function setOvMerge(v){ STATE.ui.ovMerge=v; STATE.ui.editingBlockId=null; renderOverview(); }
+/* The single rhythm channel whose chords are placed over the lyrics. */
+function primaryChordChannel(){
+  return visibleOverviewChannels().find(c=>c.type==='rhythm')||null;
+}
+/* Columns: in merged mode rhythm is folded into lyrics; in separated mode it is its own column. */
+function overviewColumnChannels(){
+  const vis=visibleOverviewChannels();
+  return ovMerged()? vis.filter(c=>c.type!=='rhythm') : vis;
+}
+function toggleOverviewChannel(id){
+  const h=STATE.ui.hiddenChannels||(STATE.ui.hiddenChannels=[]);
+  const i=h.indexOf(id); if(i>=0)h.splice(i,1);else h.push(id);
+  renderOverview();
+}
+function ovColTemplate(channels){
+  const cols=channels.map(c=>{
+    if(c.type==='lyrics')return'minmax(300px,1.9fr)';
+    if(c.type==='lead'||c.type==='bass')return'minmax(190px,1.1fr)';
+    if(c.type==='rhythm')return'minmax(170px,1.1fr)';
+    return'minmax(150px,1fr)';
   });
-  bindDragAndDrop();
-  updateOverviewStats();
-  // Auto-size every lyric textarea to its content
-  requestAnimationFrame(()=>{
-    $$('.ov-lyric-edit').forEach(autoGrow);
-  });
+  return`108px ${cols.join(' ')} 32px`;
 }
 
-function buildOverviewBlock(block,i,lyricsCh,rhythmCh){
+/* ── Repeat detection ── */
+function channelFingerprint(block,ch){
+  const c=block.content[ch.id];if(!c)return'';
+  if(ch.type==='rhythm'){const cd=getChords(block,ch.id);return cd.length?('R:'+cd.map(x=>x.name+'@'+x.beats).join(',')):''}
+  if(ch.type==='lead'||ch.type==='bass'){const t=normalizeTab(c.tab,tabType(ch));return /[0-9xXhHpPbB]/.test(t)?('T:'+t.replace(/\s+/g,'')):''}
+  if(ch.type==='drums'){const p=c.pattern||{};const s=Object.keys(p).sort().map(k=>k+':'+(p[k]||[]).map(v=>v?1:0).join('')).join('|');return /1/.test(s)?('D:'+s):''}
+  if(ch.type==='lyrics')return'';
+  return c.text&&c.text.trim()?('N:'+c.text.trim()):'';
+}
+function buildRepeatMap(){
+  const map={}; STATE.song.channels.forEach(ch=>map[ch.id]={});
+  STATE.song.blocks.forEach((b,i)=>STATE.song.channels.forEach(ch=>{
+    const fp=channelFingerprint(b,ch);
+    if(fp && !(fp in map[ch.id]))map[ch.id][fp]={index:i};
+  }));
+  return map;
+}
+function matchingProgression(block,ch){
+  if(ch.type!=='rhythm')return null; ensureProgs();
+  const fp=getChords(block,ch.id).map(x=>x.name+'|'+x.beats).join(',');
+  if(!fp)return null;
+  return STATE.song.progressions.find(p=>p.chords.map(c=>(c.name||c)+'|'+(c.beats||sigBeats())).join(',')===fp)||null;
+}
+function ovBadges(block,ch,blockIndex,repeatMap){
+  let b=''; const ic='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8a6 6 0 0110-4M14 8a6 6 0 01-10 4M12 1v3h-3M4 15v-3h3"/></svg>';
+  if(ch.type==='rhythm'){const prog=matchingProgression(block,ch);if(prog)b+=`<span class="ov-repeat pattern" title="Patrón guardado">${ic}${escapeHTML(prog.name)}</span>`;}
+  const first=repeatMap[ch.id]?.[channelFingerprint(block,ch)];
+  if(first&&first.index<blockIndex)b+=`<span class="ov-repeat" title="Igual que el bloque ${first.index+1}">${ic}como #${String(first.index+1).padStart(2,'0')}</span>`;
+  return b;
+}
+
+/* ── Per-line chord placement (line = time-bar) ── */
+function distributeChordsToLines(block,ch){
+  const total=block.bars*sigBeats();
+  const lyrics=getLyricsChannel();
+  const text=block.content[lyrics.id]?.text||'';
+  let lines=text.length?text.split('\n'):[''];
+  const n=lines.length;
+  const chords=getChords(block,ch.id);
+  const out=lines.map(t=>({text:t,chords:[],beatsPerLine:total/n,barsPerLine:(total/n)/sigBeats()}));
+
+  // If the rhythm chords carry line breaks, map each chord-line to a lyric line.
+  const groups=[[]]; chords.forEach((c,i)=>{groups[groups.length-1].push(c);if(c.br&&i<chords.length-1)groups.push([])});
+  if(groups.length>1){
+    groups.forEach((g,gi)=>{
+      const li=Math.min(n-1,gi);
+      const lineBeats=g.reduce((s,c)=>s+c.beats,0)||1;
+      out[li].beatsPerLine=lineBeats; out[li].barsPerLine=lineBeats/sigBeats();
+      let pos=0; g.forEach(c=>{out[li].chords.push({name:c.name,beats:c.beats,offset:Math.max(0,Math.min(.97,pos/lineBeats))});pos+=c.beats});
+    });
+    return {lines:out,beatsPerLine:total/n,total};
+  }
+
+  // Otherwise distribute evenly across the lyric lines by time.
+  const bpl=total/n; let pos=0;
+  const placed=chords.map(c=>{const s=pos;pos+=c.beats;return{name:c.name,beats:c.beats,start:s}});
+  placed.forEach(p=>{let li=Math.min(n-1,Math.max(0,Math.floor((p.start+1e-6)/bpl)));const ls=li*bpl;out[li].chords.push({name:p.name,beats:p.beats,offset:Math.max(0,Math.min(.97,(p.start-ls)/bpl))})});
+  return {lines:out,beatsPerLine:bpl,total};
+}
+
+function renderOverview(){
+  ovMerged(); // ensure default
+  const columns=overviewColumnChannels();
+  const repeatMap=buildRepeatMap();
+
+  const visChips=STATE.song.channels.map(c=>{
+    const off=(STATE.ui.hiddenChannels||[]).includes(c.id);
+    return`<span class="ov-vis-chip${off?' off':''}" style="--ch-color:${c.color}" onclick="toggleOverviewChannel('${c.id}')" title="Mostrar/ocultar"><span class="sw"></span>${escapeHTML(c.name)}</span>`;
+  }).join('');
+  const merge=ovMerged();
+  $('#editorHead').innerHTML=
+    `<div class="editor-title"><span class="editor-title-tag">Overview</span><h2>${escapeHTML(STATE.song.title)||'Untitled'}</h2></div>`+
+    `<div class="ov-toolbar">`+
+      `<div class="pick-group ov-mode"><button class="${merge?'active':''}" onclick="setOvMerge(true)" title="Acordes encima de la letra">Fusionado</button><button class="${merge?'':'active'}" onclick="setOvMerge(false)" title="Rítmica y letra en columnas">Separado</button></div>`+
+      `<div class="ov-vis">${visChips}</div>`+
+      `<span style="font-size:10px;color:var(--ink-faint)" id="ovStats"></span>`+
+      `<button class="add-block-btn" data-action="add-block">+ Add Block</button>`+
+    `</div>`;
+
+  const cv=$('#canvas');cv.className='canvas';cv.style.cssText='';cv.innerHTML='';
+  const hint=document.createElement('div');hint.className='ov-hint';
+  hint.innerHTML = merge
+    ? `<i style="font-style:normal;opacity:.7">✎</i> Cada línea se interpreta como una <b>barra de tiempos</b>: los acordes se colocan encima en el beat donde tocan. Clic en una línea para editarla. Cambia a <b>Separado</b> para ver rítmica y letra en columnas.`
+    : `<i style="font-style:normal;opacity:.7">✎</i> Rítmica y letra en <b>columnas separadas</b>. Cambia a <b>Fusionado</b> para poner los acordes encima de cada línea.`;
+  cv.appendChild(hint);
+
+  if(!STATE.song.blocks.length)addBlock('VERSE',4);
+
+  const tpl=ovColTemplate(columns);
+  const wrap=document.createElement('div');wrap.className='ov-grid-wrap';
+
+  const head=document.createElement('div');head.className='ov-channel-head';head.style.gridTemplateColumns=tpl;
+  let hh=`<div class="ov-ch-cell"><span class="ov-ch-gutter">Bloque</span></div>`;
+  columns.forEach(ch=>{
+    const info=CH_TYPE_INFO[ch.type]||CH_TYPE_INFO.notes;
+    const extra=(merge&&ch.type==='lyrics'&&primaryChordChannel())?' + acordes':'';
+    hh+=`<div class="ov-ch-cell" style="--ch-color:${ch.color}"><span class="ov-ch-swatch"></span><span><span class="ov-ch-title">${escapeHTML(ch.name)}</span> <span class="ov-ch-sub">${info.label}${extra}</span></span></div>`;
+  });
+  hh+=`<div class="ov-ch-cell"></div>`;head.innerHTML=hh;wrap.appendChild(head);
+
+  wrap.appendChild(makeInsertZone(0));
+  STATE.song.blocks.forEach((block,i)=>{
+    wrap.appendChild(buildOverviewRow(block,i,columns,tpl,repeatMap));
+    wrap.appendChild(makeInsertZone(i+1));
+  });
+  cv.appendChild(wrap);
+
+  bindDragAndDrop();updateOverviewStats();
+  requestAnimationFrame(()=>{$$('.ov-lyric-edit').forEach(autoGrow)});
+}
+
+function buildOverviewRow(block,i,columns,tpl,repeatMap){
   const cur=STATE.ui.isPlaying&&i===STATE.ui.currentBlockIndex;
   const pp=cur?(STATE.ui.blockProgress*100):0;
   const d=document.createElement('div');
-  d.className='overview-block'+(block.enabled?'':' disabled')+(cur?' current':'');
-  d.dataset.blockId=block.id;d.draggable=true;d.style.position='relative';
+  d.className='ov-row'+(block.enabled?'':' disabled')+(cur?' current':'');
+  d.dataset.blockId=block.id;d.draggable=true;d.style.gridTemplateColumns=tpl;
 
-  const lt=block.content[lyricsCh.id]?.text||'';
-  const cds=rhythmCh?getChords(block,rhythmCh.id):[];
-  const pills=STATE.song.channels.map(c=>`<div class="ch-pill${c.muted||!blockHasContent(block,c)?' off':''}" style="--ch-color:${c.color}" title="${escapeHTML(c.name)}"></div>`).join('');
+  let html=`<div class="ov-gutter block-handle" draggable="false">
+    <div class="ov-gutter-top"><span class="ov-gutter-num">${String(i+1).padStart(2,'0')}</span><span class="ov-gutter-beats">${block.bars*sigBeats()}b</span></div>
+    ${renderSectionTag(block)}
+    <div class="ov-gutter-bars"><label>Bars</label><input class="bars-input" type="number" min="1" max="32" value="${block.bars}" onchange="setBars('${block.id}',this.value)"></div>
+  </div>`;
+  columns.forEach(ch=>{html+=`<div class="ov-cell${ch.muted?' muted':''}">${renderOverviewCell(ch,block,i,repeatMap)}</div>`});
+  html+=`<div class="ov-acts">
+    <button class="${block.enabled?'toggle-on':''}" onclick="toggleBlockEnabled('${block.id}')" title="Activar/silenciar">${block.enabled?'●':'○'}</button>
+    <button onclick="duplicateBlock('${block.id}')" title="Duplicar">⧉</button>
+    <button class="del" onclick="deleteBlockKeepText('${block.id}')" title="Eliminar">×</button>
+  </div>
+  <div class="block-progress" style="width:${pp}%"></div>`;
+  d.innerHTML=html;return d;
+}
 
-  d.innerHTML=`
-    <div class="block-handle" style="cursor:grab" draggable="false">
-      <div class="block-num">${String(i+1).padStart(2,'0')}</div>
-      <div class="block-bars">${block.bars}b</div>
-    </div>
-    <div class="overview-content">
-      <div class="overview-meta">
-        ${renderSectionTag(block)}
-        <span style="font-size:9px;color:var(--ink-faint)">Bars</span>
-        <input class="bars-input" type="number" min="1" max="32" value="${block.bars}" onchange="setBars('${block.id}',this.value)">
-        <span style="font-size:9px;color:var(--ink-faint);margin-left:auto">${block.bars*sigBeats()} beats</span>
-      </div>
-      <textarea class="ov-lyric-edit" data-block-id="${block.id}" placeholder="Type lyrics for this block… (blank line = new block)"
-        oninput="onOverviewLyricInput(event,'${block.id}','${lyricsCh.id}')"
-        onkeydown="onOverviewLyricKey(event,'${block.id}','${lyricsCh.id}')"
-        onpaste="onOverviewLyricPaste(event,'${block.id}','${lyricsCh.id}')">${escapeHTML(lt)}</textarea>
-      ${cds.length?`<div class="overview-chords">${cds.map(c=>`<span class="overview-chip">${escapeHTML(c.name)}${c.beats!==sigBeats()?`<span style="opacity:.6;font-size:9px">·${c.beats}</span>`:''}</span>`).join('')}</div>`:''}
-      ${block.comment?`<div class="overview-comment-show">💬 ${escapeHTML(block.comment)}</div>`:''}
-    </div>
-    <div class="overview-channels-mini">${pills}</div>
-    <div class="block-actions">
-      <button class="${block.enabled?'toggle-on':''}" onclick="toggleBlockEnabled('${block.id}')" title="Toggle">${block.enabled?'●':'○'}</button>
-      <button onclick="duplicateBlock('${block.id}')" title="Duplicate">⧉</button>
-      <button class="del" onclick="deleteBlockKeepText('${block.id}')" title="Delete">×</button>
-    </div>
-    <div class="block-progress" style="width:${pp}%"></div>`;
-  return d;
+function renderOverviewCell(ch,block,blockIndex,repeatMap){
+  if(ch.type==='lyrics') return renderLyricsCell(ch,block,blockIndex,repeatMap);
+
+  const fp=channelFingerprint(block,ch);
+  if(!fp)return`<div class="ov-cell-empty">·</div>`;
+  const badges=ovBadges(block,ch,blockIndex,repeatMap);
+  let body='';
+  if(ch.type==='rhythm'){ body=ovChordLane(block,ch); }          // separated mode column
+  else if(ch.type==='lead'||ch.type==='bass'){ body=`<div class="ov-tab">${escapeHTML(normalizeTab(block.content[ch.id].tab,tabType(ch)))}</div>`; }
+  else if(ch.type==='drums'){ body=ovDrumMini(block,ch); }
+  else { body=`<div class="ov-notes">${escapeHTML(block.content[ch.id].text||'')}</div>`; }
+  return badges+body;
+}
+
+/* The lyrics cell: editable textarea, OR (merged + not editing) per-line chord display. */
+function renderLyricsCell(ch,block,blockIndex,repeatMap){
+  const lt=block.content[ch.id]?.text||'';
+  const editing=STATE.ui.editingBlockId===block.id;
+  const chordCh=primaryChordChannel();
+
+  if(!ovMerged() || editing){
+    const lanes=(ovMerged()&&editing&&chordCh)? '' : ''; // (chords hidden while typing)
+    return`${lanes}<textarea class="ov-lyric-edit" data-block-id="${block.id}" placeholder="Letra del bloque… (línea en blanco = nuevo bloque)"
+      oninput="onOverviewLyricInput(event,'${block.id}','${ch.id}')"
+      onkeydown="onOverviewLyricKey(event,'${block.id}','${ch.id}')"
+      onpaste="onOverviewLyricPaste(event,'${block.id}','${ch.id}')"
+      ${ovMerged()?`onblur="onLyricBlur(event)"`:''}>${escapeHTML(lt)}</textarea>`;
+  }
+
+  // Merged display: chords above each line.
+  const badges=chordCh?ovBadges(block,chordCh,blockIndex,repeatMap):'';
+  let body='';
+  if(chordCh){
+    const {lines}=distributeChordsToLines(block,chordCh);
+    body=lines.map(ln=>ovLineHTML(ln)).join('');
+  }else{
+    // no chords → still editable lines
+    const arr=lt.length?lt.split('\n'):[''];
+    body=arr.map(t=>ovLineHTML({text:t,chords:[],beatsPerLine:0,barsPerLine:0})).join('');
+  }
+  return`<div class="ov-lyrics-disp" onclick="startEditLyrics('${block.id}')" title="Clic para editar">${badges?`<div class="ov-lc-badges">${badges}</div>`:''}${body}</div>`;
+}
+
+/* One lyric line with its chords positioned by beat over a time-bar. */
+function ovLineHTML(ln){
+  const bpl=ln.beatsPerLine||0;
+  const hasChords=ln.chords&&ln.chords.length;
+  let chordRow='';
+  if(hasChords||bpl){
+    let ticks='';
+    if(bpl){
+      const beats=Math.round(bpl); const sb=sigBeats();
+      for(let k=0;k<beats;k++){const left=(k/bpl)*100;ticks+=`<span class="ov-ln-tick${k%sb===0?' bar':''}" style="left:${left}%"></span>`}
+    }
+    const chords=(ln.chords||[]).map(c=>`<span class="ov-ln-chord" style="left:${(c.offset*100).toFixed(2)}%">${escapeHTML(c.name)}<span class="bt">${c.beats}b</span></span>`).join('');
+    chordRow=`<div class="ov-ln-chords">${ticks}${chords}</div>`;
+  }
+  const txt=ln.text&&ln.text.trim()?escapeHTML(ln.text):'<span class="empty">Letra…</span>';
+  return`<div class="ov-ln">${chordRow}<div class="ov-ln-text">${txt}</div></div>`;
+}
+
+/* Click a line to edit the whole block's lyrics in place. */
+function startEditLyrics(id){
+  STATE.ui.editingBlockId=id; renderOverview();
+  requestAnimationFrame(()=>{const t=document.querySelector(`textarea[data-block-id="${id}"]`);if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);autoGrow(t)}});
+}
+/* Stop editing only when focus truly left the lyric editors (not during split/merge re-render). */
+function onLyricBlur(e){
+  setTimeout(()=>{
+    const ae=document.activeElement;
+    if(ae&&ae.classList&&ae.classList.contains('ov-lyric-edit'))return;
+    if(STATE.ui.editingBlockId!==null){STATE.ui.editingBlockId=null;renderOverview()}
+  },60);
+}
+
+/* Proportional chord lane (used by the separated-mode rhythm column). */
+function ovChordLane(block,ch){
+  const chords=getChords(block,ch.id);
+  if(!chords.length)return`<div class="ov-cell-empty">·</div>`;
+  const lane=chords.map(c=>`<div class="ov-chord-cell" style="flex-grow:${c.beats};flex-shrink:1;flex-basis:0"><span class="nm">${escapeHTML(c.name)}</span><span class="bt">${c.beats}b</span></div>`).join('');
+  let ticks='<div class="ov-bar-ticks">';for(let b=0;b<block.bars;b++)ticks+='<div class="ov-bar-tick"></div>';ticks+='</div>';
+  return`<div class="ov-chord-lane">${lane}</div>${ticks}`;
+}
+function ovDrumMini(block,ch){
+  const p=block.content[ch.id]?.pattern||{};const rows=['HH','SN','KK','TM','CY'];
+  const total=block.bars*sigBeats()*4,step=Math.max(1,Math.floor(total/24));
+  let h='<div class="ov-drum" style="--ch-color:'+ch.color+'">';
+  rows.forEach(r=>{const a=p[r]||[];h+=`<div class="ov-drum-row"><span class="ov-drum-lab">${r}</span><div class="ov-drum-dots">`;for(let i=0;i<total;i+=step)h+=`<div class="ov-drum-dot${a[i]?' on':''}"></div>`;h+='</div></div>'});
+  return h+'</div>';
 }
 
 /* Auto-grow the textarea and persist text as you type. */
@@ -1590,6 +2773,7 @@ function onOverviewLyricKey(e,blockId,lyricsChId){
       // Create a new block right after, carrying the rest of the text
       const newId=insertBlockAfter(idx,STATE.song.blocks[idx].section);
       setText(lyricsChId,newId,moved);
+      if(ovMerged())STATE.ui.editingBlockId=newId;
       renderOverview();
       // focus the new block at start
       requestAnimationFrame(()=>{
@@ -1612,6 +2796,7 @@ function onOverviewLyricKey(e,blockId,lyricsChId){
       setText(lyricsChId,prev.id,merged);
       // remove current block
       STATE.song.blocks.splice(idx,1);
+      if(ovMerged())STATE.ui.editingBlockId=prev.id;
       renderOverview();
       requestAnimationFrame(()=>{
         const pt=document.querySelector(`textarea[data-block-id="${prev.id}"]`);
@@ -1648,6 +2833,7 @@ function onOverviewLyricPaste(e,blockId,lyricsChId){
     setText(lyricsChId,newId,txt.trim());
     insertAt++;lastId=newId;
   }
+  if(ovMerged())STATE.ui.editingBlockId=lastId;
   renderOverview();
   requestAnimationFrame(()=>{
     const lt=document.querySelector(`textarea[data-block-id="${lastId}"]`);
@@ -1719,11 +2905,25 @@ function lightBeat(b){$$('#beatLeds .led').forEach((l,i)=>l.classList.toggle('on
 function togglePlay(){STATE.ui.isPlaying?pausePlayback():startPlayback()}
 function startPlayback(){ensureAudio();STATE.ui.isPlaying=true;STATE.ui.blockProgress=0;$('#playBtn').classList.add('active');$('#playIcon').innerHTML='<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';if(STATE.ui.countIn>0){STATE.ui.isCountingIn=true;STATE.ui.countInBeatsLeft=STATE.ui.countIn*sigBeats();startCountIn()}else{STATE.ui.isCountingIn=false;startMetronome()}}
 function startCountIn(){const iv=60000/STATE.song.bpm,bpb=sigBeats(),tot=STATE.ui.countInBeatsLeft;function tick(){if(STATE.ui.countInBeatsLeft<=0){clearInterval(STATE.ui.metronomeTimer);STATE.ui.isCountingIn=false;startMetronome();return}const b=(tot-STATE.ui.countInBeatsLeft)%bpb;clickSound(b===0);lightBeat(b);STATE.ui.countInBeatsLeft--}tick();STATE.ui.metronomeTimer=setInterval(tick,iv)}
-function pausePlayback(){STATE.ui.isPlaying=false;STATE.ui.isCountingIn=false;STATE.ui.blockProgress=0;$('#playBtn').classList.remove('active');$('#playIcon').innerHTML='<path d="M8 5v14l11-7z"/>';if(STATE.ui.metronomeTimer)clearInterval(STATE.ui.metronomeTimer);STATE.ui.metronomeTimer=null;$$('#beatLeds .led').forEach(l=>l.classList.remove('on'));renderEditor()}
+function pausePlayback(){STATE.ui.isPlaying=false;STATE.ui.isCountingIn=false;STATE.ui.blockProgress=0;$('#playBtn').classList.remove('active');$('#playIcon').innerHTML='<path d="M8 5v14l11-7z"/>';if(STATE.ui.metronomeTimer)clearInterval(STATE.ui.metronomeTimer);STATE.ui.metronomeTimer=null;$$('#beatLeds .led').forEach(l=>l.classList.remove('on'));$$('.chord-slot.chord-active').forEach(s=>s.classList.remove('chord-active'));renderEditor()}
 function stopPlayback(){pausePlayback();STATE.ui.currentBlockIndex=0;STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;renderEditor()}
 function restartMetronome(){if(STATE.ui.metronomeTimer)clearInterval(STATE.ui.metronomeTimer);startMetronome()}
 function startMetronome(){const iv=60000/STATE.song.bpm,bpb=sigBeats();function tick(){const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block){stopPlayback();return}if(!block.enabled){STATE.ui.currentBlockIndex++;STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;if(STATE.ui.currentBlockIndex>=STATE.song.blocks.length){stopPlayback();return}renderEditor();scrollToCurrentBlock();return}const tot=block.bars*bpb;clickSound(STATE.ui.currentBeat===0);lightBeat(STATE.ui.currentBeat%bpb);const tp=(STATE.ui.currentBeat+1)/tot;if(STATE.ui.currentBeat===0){STATE.ui.blockProgress=0;renderEditor();scrollToCurrentBlock();requestAnimationFrame(()=>requestAnimationFrame(()=>{STATE.ui.blockProgress=tp;updateProgressBar()}))}else{STATE.ui.blockProgress=tp;updateProgressBar()}updateTLPlayhead();STATE.ui.currentBeat++;if(STATE.ui.currentBeat>=tot){STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;STATE.ui.currentBlockIndex++;if(STATE.ui.currentBlockIndex>=STATE.song.blocks.length)stopPlayback()}}tick();STATE.ui.metronomeTimer=setInterval(tick,iv)}
-function updateProgressBar(){const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block)return;const el=document.querySelector(`[data-block-id="${block.id}"] .block-progress`);if(!el)return;const bs=(60/STATE.song.bpm).toFixed(3);el.style.transition=`width ${bs}s linear`;el.style.width=(STATE.ui.blockProgress*100)+'%'}
+function updateProgressBar(){
+  const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block)return;
+  const el=document.querySelector(`[data-block-id="${block.id}"] .block-progress`);
+  if(el){const bs=(60/STATE.song.bpm).toFixed(3);el.style.transition=`width ${bs}s linear`;el.style.width=(STATE.ui.blockProgress*100)+'%'}
+  const beatPos=STATE.ui.blockProgress*block.bars*sigBeats();
+  STATE.song.channels.forEach(ch=>{
+    if(ch.type!=='rhythm')return;
+    const cont=document.querySelector(`.chord-slots[data-block="${block.id}"][data-ch="${ch.id}"]`);
+    if(!cont)return;
+    const chords=getChords(block,ch.id);if(!chords.length)return;
+    let acc=0,active=chords.length-1;
+    for(let i=0;i<chords.length;i++){acc+=chords[i].beats;if(beatPos<acc){active=i;break}}
+    cont.querySelectorAll('.chord-slot').forEach((s,k)=>s.classList.toggle('chord-active',k===active));
+  });
+}
 function scrollToCurrentBlock(){if(!STATE.ui.autoScroll)return;const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block)return;if(STATE.ui.view==='timeline'){const bd=$('#tlBody');if(bd){const off=STATE.ui.currentBlockIndex*TL_BW,vw=bd.clientWidth-136;if(off<bd.scrollLeft||off>bd.scrollLeft+vw-TL_BW)bd.scrollTo({left:Math.max(0,off-vw/3),behavior:'smooth'})}return}const el=document.querySelector(`[data-block-id="${block.id}"]`);if(el)el.scrollIntoView({behavior:'smooth',block:'center'})}
 function adjustBpm(d){STATE.song.bpm=clamp(STATE.song.bpm+d,20,300);$('#bpmInput').value=STATE.song.bpm;if(STATE.ui.isPlaying)restartMetronome();renderEditor()}
 function toggleAutoScroll(){STATE.ui.autoScroll=!STATE.ui.autoScroll;$('#autoScroll').classList.toggle('on',STATE.ui.autoScroll)}
@@ -1736,7 +2936,7 @@ function confirmAddChannel(){const t=$('#newChType').value;let n=$('#newChName')
 /* ── Export / Import ── */
 function exportJSON(){const p={format:'muss-v1',exported_at:new Date().toISOString(),song:STATE.song};const bl=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});const u=URL.createObjectURL(bl),a=document.createElement('a');a.href=u;a.download=((STATE.song.title||'untitled').replace(/[^a-z0-9]+/gi,'_').toLowerCase())+'.muss.json';a.click();URL.revokeObjectURL(u);flash('Exported')}
 function importJSON(){$('#importFile').click()}
-function handleImport(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.song)throw new Error('Invalid file');STATE.song=d.song;STATE.song.channels=STATE.song.channels||[];STATE.song.blocks=STATE.song.blocks||[];STATE.song.progressions=STATE.song.progressions||[];STATE.ui.activeChannelId=STATE.song.channels[0]?.id||null;STATE.ui.currentBlockIndex=0;renderAll();renderBeatLeds();flash('Imported')}catch(err){alert('Error: '+err.message)}};r.readAsText(f);e.target.value=''}
+function handleImport(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.song)throw new Error('Invalid file');STATE.song=d.song;STATE.song.channels=STATE.song.channels||[];STATE.song.blocks=STATE.song.blocks||[];STATE.song.progressions=STATE.song.progressions||[];if(!STATE.song.library)STATE.song.library={riffs:[]};if(!STATE.song.library.riffs)STATE.song.library.riffs=[];STATE.ui.activeChannelId=STATE.song.channels[0]?.id||null;STATE.ui.currentBlockIndex=0;renderAll();renderBeatLeds();flash('Imported')}catch(err){alert('Error: '+err.message)}};r.readAsText(f);e.target.value=''}
 
 /* ── Bindings ── */
 function bindAll(){
@@ -1755,7 +2955,7 @@ function bindAll(){
   $$('.view-tab').forEach(t=>t.addEventListener('click',()=>{$$('.view-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');STATE.ui.view=t.dataset.view;renderEditor()}));
   // Sidebar delegation
   document.querySelector('.add-ch-btn').addEventListener('click',openChannelModal);
-  $('#channelsList').addEventListener('click',e=>{const item=e.target.closest('.channel-item');if(!item)return;const id=item.dataset.channelId;if(e.target.closest('[data-action="mute"]')){toggleMute(id);return}if(e.target.closest('[data-action="delete"]')){const ch=STATE.song.channels.find(c=>c.id===id);if(ch&&confirm('Delete "'+ch.name+'"?'))deleteChannel(id);return}STATE.ui.activeChannelId=id;STATE.ui.view='channel';$$('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view==='channel'));renderAll()});
+  $('#channelsList').addEventListener('click',e=>{const item=e.target.closest('.channel-item');if(!item)return;const id=item.dataset.channelId;if(e.target.closest('[data-action="mute"]')){toggleMute(id);return}if(e.target.closest('[data-action="delete"]')){const ch=STATE.song.channels.find(c=>c.id===id);if(ch&&confirm('Delete "'+ch.name+'"?'))deleteChannel(id);return}STATE.ui.activeChannelId=id;STATE.ui.view='channel';STATE.ui.rhythmTab='blocks';STATE.ui.tabTab='blocks';$$('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view==='channel'));renderAll()});
   // Editor head "add block"
   $('#editorHead').addEventListener('click',e=>{if(e.target.closest('[data-action="add-block"]')){addBlock('VERSE',4);renderEditor()}});
   // Top actions
@@ -1765,30 +2965,784 @@ function bindAll(){
   const mask=$('#channelModal');
   mask.addEventListener('click',e=>{if(e.target===mask)closeChannelModal();const a=e.target.closest('[data-action]')?.dataset.action;if(a==='close-channel-modal')closeChannelModal();if(a==='confirm-channel')confirmAddChannel()});
   // Refit tab fonts when the window resizes so they always fill the slot
-  let rT;window.addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{
-    const seen=new Set();
-    document.querySelectorAll('.tabgrid').forEach(g=>{if(!seen.has(g.dataset.ci)){seen.add(g.dataset.ci);fitTabFontAll(g.dataset.ci)}});
-  },120)});
+  let rT;window.addEventListener('resize',()=>{clearTimeout(rT);rT=setTimeout(()=>{$$('.tabgrid').forEach(g=>fitTabFont(g.id))},120)});
 }
 
 /* ── Init ── */
 function init(){
-  // Only one default channel: Lyrics. Start with a single empty block
-  // ready to type into — the song grows as you write.
-  addChannel('Vocals','lyrics');
-  addBlock('VERSE',4);
-  STATE.ui.activeChannelId=STATE.song.channels[0].id;
-  STATE.ui.view='overview'; // overview is the default view
+  // One-time workbench bindings (handlers attach to elements that always exist).
   bindAll();
   renderBeatLeds();
+
+  // Library boot: load saved songs, seed on first run, wire the dashboard.
+  libLoad();
+  if(!LIB.records.length){ librarySeed(); libSave(); }
+  libBind();
+  $('#wbBack').addEventListener('click', libBack);
+  libRender();
+  showScreen('library');   // always start on the dashboard
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════
+   READING MODE · ChordPro lead sheet
+   A songbook-style view: section headers with bar count + mm:ss
+   timing derived from the tempo, chords anchored to a character
+   point in each lyric line. Editable as plain text and saved back
+   into the block model (lyrics + rhythm chords + per-block chordpro).
+   ═══════════════════════════════════════════════════════════════ */
+function fmtTime(sec){const m=Math.floor(sec/60),s=Math.round(sec%60);return m+':'+String(s).padStart(2,'0')}
+function secPerBeat(){return 60/(STATE.song.bpm||120)}
+function totalDur(){return STATE.song.blocks.reduce((t,b)=>t+(b.enabled?b.bars*sigBeats()*secPerBeat():0),0)}
+
+/* Even integer beat distribution that sums to `total`. */
+function distributeBeat(total,n,k){const base=Math.floor(total/n),rem=total-base*n;return base+(k<rem?1:0)}
+
+/* Build the ChordPro lines for a block (use saved chordpro, else synthesize). */
+function blockToChordProLines(block,fresh){
+  if(!fresh && block.chordpro!=null && block.chordpro!=='') return block.chordpro;
+  const ly=getLyricsChannel();
+  const text=block.content[ly.id]?.text||'';
+  const rh=STATE.song.channels.find(c=>c.type==='rhythm');
+  const chords=rh?getChords(block,rh.id):[];
+  const lines=text.length?text.split('\n'):[''];
+  if(!chords.length) return lines.join('\n');
+  const per=Math.ceil(chords.length/lines.length);
+  let ci=0;
+  const out=lines.map(ln=>{const grp=chords.slice(ci,ci+per);ci+=per;return grp.map(c=>`[${c.name}]`).join('')+ln});
+  if(ci<chords.length)out[out.length-1]+=chords.slice(ci).map(c=>`[${c.name}]`).join('');
+  return out.join('\n');
+}
+
+/* Whole-song ChordPro source. */
+function songToChordPro(fresh){
+  const s=STATE.song;
+  let out=`{title: ${s.title||''}}\n{artist: ${s.artist||''}}\n{bpm: ${s.bpm}}\n{signature: ${s.signature}}\n`;
+  s.blocks.forEach(b=>{out+=`\n[${b.section} x${b.bars}]\n`+blockToChordProLines(b,fresh)+'\n'});
+  return out.trim()+'\n';
+}
+
+/* Parse ChordPro source → metadata + blocks [{section,bars,lines[]}]. */
+function chordProToBlocks(text){
+  const lines=text.replace(/\r/g,'').split('\n');
+  const blocks=[],meta={};let cur=null;
+  for(const line of lines){
+    const mMeta=line.match(/^\{(\w+):\s*(.*)\}\s*$/);
+    if(mMeta){meta[mMeta[1].toLowerCase()]=mMeta[2].trim();continue}
+    // Section header: a lone [NAME] or [NAME x9]; must be a single bracket pair (no inner "][").
+    const mSec=line.match(/^\[([^\]\[]+?)\]\s*$/);
+    if(mSec && !/\]\s*\[/.test(line)){
+      const inner=mSec[1].trim();
+      const xm=inner.match(/^(.*?)\s*x\s*(\d+)\s*$/i);
+      const name=(xm?xm[1]:inner).trim();
+      cur={section:name.toUpperCase(),bars:xm?parseInt(xm[2]):null,lines:[]};
+      blocks.push(cur);continue;
+    }
+    if(line.trim()===''){continue}        // blank lines are separators (headers delimit blocks)
+    if(!cur){cur={section:'VERSE',bars:null,lines:[]};blocks.push(cur)}
+    cur.lines.push(line);
+  }
+  return {meta,blocks};
+}
+
+/* Save edited ChordPro back into the song model. */
+function saveChordPro(text){
+  const {meta,blocks:parsed}=chordProToBlocks(text);
+  if(meta.title!=null)STATE.song.title=meta.title;
+  if(meta.artist!=null)STATE.song.artist=meta.artist;
+  if(meta.bpm)STATE.song.bpm=parseInt(meta.bpm)||STATE.song.bpm;
+  if(meta.signature)STATE.song.signature=meta.signature;
+  if(!parsed.length){flash('Nada que guardar');return}
+
+  const ly=getLyricsChannel();
+  let rh=STATE.song.channels.find(c=>c.type==='rhythm');
+  const anyChords=parsed.some(b=>b.lines.some(l=>/\[[^\]]+\]/.test(l)));
+  if(!rh && anyChords){const id=addChannel('Ritmica','rhythm');rh=STATE.song.channels.find(c=>c.id===id)}
+
+  while(STATE.song.blocks.length<parsed.length)insertBlockAfter(STATE.song.blocks.length-1,'VERSE');
+  while(STATE.song.blocks.length>parsed.length)STATE.song.blocks.pop();
+
+  parsed.forEach((p,i)=>{
+    const b=STATE.song.blocks[i];
+    if(p.section)b.section=p.section;
+    if(p.bars)b.bars=Math.max(1,Math.min(64,p.bars));
+    const names=[];
+    const stripped=p.lines.map(l=>l.replace(/\[([^\]]+)\]/g,(_,c)=>{names.push(c.trim());return''}));
+    b.chordpro=p.lines.join('\n');
+    if(!b.content[ly.id])b.content[ly.id]={};
+    b.content[ly.id].text=stripped.join('\n').replace(/[ \t]+$/gm,'');
+    if(rh){
+      if(!b.content[rh.id])b.content[rh.id]=defaultContent('rhythm');
+      const total=b.bars*sigBeats(),n=names.length;
+      b.content[rh.id].chords=n?names.map((nm,k)=>({name:nm,beats:distributeBeat(total,n,k)})):[];
+      b.content[rh.id].notes=b.content[rh.id].notes||'';
+    }
+  });
   renderAll();
-  $('#autoScroll').classList.toggle('on',STATE.ui.autoScroll);
-  // Focus the first lyric editor so the user can type immediately
-  requestAnimationFrame(()=>{
-    const t=document.querySelector('.ov-lyric-edit');
-    if(t)t.focus();
+  flash('Lead sheet guardado');
+}
+function saveChordProFromEditor(){const t=$('#rdSource');if(t)saveChordPro(t.value)}
+function regenChordPro(){const t=$('#rdSource');if(t)t.value=songToChordPro(true)}
+
+/* ── Lead-sheet preview (chords anchored to lyric characters) ── */
+function rdLineHTML(line){
+  let stripped='';const chords=[];let last=0,m;const re=/\[([^\]]+)\]/g;
+  while((m=re.exec(line))){stripped+=line.slice(last,m.index);chords.push({name:m[1].trim(),pos:stripped.length});last=m.index+m[0].length}
+  stripped+=line.slice(last);
+  const chordRow=chords.map(c=>`<span class="rd-chord" style="left:${c.pos}ch">${escapeHTML(c.name)}</span>`).join('');
+  const txt=stripped.length?escapeHTML(stripped):'&nbsp;';
+  return`<div class="rd-line"><div class="rd-chordrow">${chordRow}</div><div class="rd-text">${txt}</div></div>`;
+}
+function renderLeadSheet(){
+  const s=STATE.song,spb=secPerBeat();let t=0;
+  let html=`<div class="rd-meta"><h3>${escapeHTML(s.artist||'—')} — ${escapeHTML(s.title||'Sin título')}</h3>`+
+           `<div class="rd-sub">${s.bpm} bpm · ${escapeHTML(s.signature)} · ${fmtTime(totalDur())} total</div></div>`;
+  s.blocks.forEach(b=>{
+    const beats=b.bars*sigBeats(),dur=beats*spb,start=t;if(b.enabled)t+=dur;
+    const src=blockToChordProLines(b);
+    html+=`<div class="rd-block${b.enabled?'':' muted'}">`+
+      `<div class="rd-sec"><span class="rd-sec-tag" style="background:${SECTION_COLORS[b.section]||'#888'}">${escapeHTML(b.section)}</span>`+
+      `<span class="rd-sec-meta">${b.bars} bars · ${fmtTime(start)}–${fmtTime(start+dur)}</span></div>`+
+      src.split('\n').map(rdLineHTML).join('')+
+    `</div>`;
+  });
+  return html;
+}
+
+function renderReading(){
+  $('#editorHead').innerHTML=
+    `<div class="editor-title"><span class="editor-title-tag" style="background:var(--accent-bg);color:var(--accent)">Lectura</span><h2>${escapeHTML(STATE.song.title)||'Untitled'}</h2></div>`+
+    `<div style="display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:var(--ink-faint)">${STATE.song.bpm} bpm · ${escapeHTML(STATE.song.signature)} · ${fmtTime(totalDur())}</span></div>`;
+  const cv=$('#canvas');cv.className='canvas';cv.style.cssText='';
+  cv.innerHTML=
+    `<div class="rd-wrap">
+      <div class="rd-sheet">${renderLeadSheet()}</div>
+      <div class="rd-editor">
+        <div class="rd-ed-head"><span><b>Editor</b> — mové los <code>[acordes]</code> sobre la letra (la posición se conserva)</span>
+          <div class="rd-ed-actions">
+            <button onclick="regenChordPro()" title="Reconstruir desde los canales">↻ Regenerar</button>
+            <button class="primary" onclick="saveChordProFromEditor()">Guardar</button>
+          </div>
+        </div>
+        <textarea id="rdSource" spellcheck="false">${escapeHTML(songToChordPro())}</textarea>
+        <div class="rd-ed-hint">Formato: <code>[SECCIÓN x8]</code> inicia un bloque de 8 compases · <code>[D]</code> coloca un acorde en ese punto del texto · línea en blanco separa bloques.</div>
+      </div>
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CHORD LINE ENGINE (shared by block-rhythm editor and pattern editor)
+   - Lines can hold N bars (group n bars per line)
+   - Add / remove line-paragraphs of N bars, validated against a max
+   - Drag a chord to another line (incl. the line below)
+   - Resize a chord to occupy >1 bar (e.g. 1.5 bars), validated by max
+   A "ref" identifies the target: {type:'block',ci,bi} or {type:'prog',progId}
+   ════════════════════════════════════════════════════════════════ */
+const round2=x=>Math.round(x*2)/2;
+function refTok(ref){return ref.type==='block'?`b|${ref.ci}|${ref.bi}`:`p|${ref.progId}`}
+function parseRef(tok){const a=tok.split('|');return a[0]==='b'?{type:'block',ci:a[1],bi:a[2]}:{type:'prog',progId:a[1]}}
+function refEq(a,b){return a&&b&&a.type===b.type&&(a.type==='prog'?a.progId===b.progId:(a.ci===b.ci&&a.bi===b.bi))}
+function refFromContainer(el){const c=el.closest&&el.closest('.chord-slots');if(!c)return null;if(c.dataset.prog)return{type:'prog',progId:c.dataset.prog};if(c.dataset.ch&&c.dataset.block)return{type:'block',ci:c.dataset.ch,bi:c.dataset.block};return null}
+/* Stable accessor: returns the live stored chord array (objects), normalizing strings once. */
+function refGet(ref){
+  const bpb=sigBeats();
+  if(ref.type==='block'){
+    const b=STATE.song.blocks.find(x=>x.id===ref.bi);if(!b)return[];
+    if(!b.content[ref.ci])b.content[ref.ci]={chords:[],notes:''};
+    if(!Array.isArray(b.content[ref.ci].chords))b.content[ref.ci].chords=[];
+    let changed=false;const a=b.content[ref.ci].chords.map(c=>typeof c==='string'?(changed=true,{name:c,beats:bpb}):c);
+    if(changed)b.content[ref.ci].chords=a;return b.content[ref.ci].chords;
+  }
+  ensureProgs();const p=STATE.song.progressions.find(x=>x.id===ref.progId);if(!p)return[];
+  let changed=false;const a=p.chords.map(c=>typeof c==='string'?(changed=true,{name:c,beats:bpb}):c);if(changed)p.chords=a;return p.chords;
+}
+function refWrite(ref,arr){
+  if(ref.type==='block'){const b=STATE.song.blocks.find(x=>x.id===ref.bi);if(b){if(!b.content[ref.ci])b.content[ref.ci]={chords:[],notes:''};b.content[ref.ci].chords=arr}}
+  else{const p=STATE.song.progressions.find(x=>x.id===ref.progId);if(p)p.chords=arr}
+}
+function refMaxBeats(ref){const bpb=sigBeats();if(ref.type==='block'){const b=STATE.song.blocks.find(x=>x.id===ref.bi);return b?b.bars*bpb:bpb}return 32*bpb}
+function refCommit(ref){if(ref.type==='prog')propagateProgBreaks(ref.progId);renderEditor()}
+
+function chordsToLines(arr){const L=[[]];arr.forEach((c,i)=>{L[L.length-1].push(c);if(c.br&&i<arr.length-1)L.push([])});return L}
+function linesToChords(lines){const out=[];lines.forEach((ln,li)=>{ln.forEach(c=>{if(c&&typeof c==='object')delete c.br;out.push(c)});if(li<lines.length-1&&out.length){const last=out[out.length-1];if(last&&typeof last==='object')last.br=true}});return out}
+
+function updateChordFill(ref){
+  const bpb=sigBeats();const arr=refGet(ref);const used=arr.reduce((s,c)=>s+(c.beats||bpb),0);
+  if(ref.type==='block'){
+    const total=refMaxBeats(ref);
+    const fEl=document.querySelector(`.chord-fill[data-fill="${ref.ci}|${ref.bi}"]`);
+    if(fEl){const fc=used===total?'ok':used>total?'over':'under';fEl.className=`chord-fill ${fc}`;fEl.textContent=`${used} / ${total} beats filled${used>total?' (over!)':used<total?' ('+(total-used)+' free)':''}`}
+  } else { const fEl=document.getElementById('pfill_'+ref.progId);if(fEl)fEl.textContent=used+' beats total'; }
+}
+
+/* ── Generic chord ops (called from inline handlers via token) ── */
+function gcAddChord(tok){const ref=parseRef(tok);const arr=refGet(ref);arr.push({name:'C',beats:sigBeats()});refWrite(ref,arr);refCommit(ref)}
+function gcUpdateName(tok,idx,text){const ref=parseRef(tok);const arr=refGet(ref);text=text.trim();if(!text){arr.splice(idx,1);refWrite(ref,arr);refCommit(ref);return}if(arr[idx])arr[idx].name=text;refWrite(ref,arr)}
+function gcToggleBreak(tok,i){
+  const ref=parseRef(tok);const bpb=sigBeats();const ch=refGet(ref);if(!ch[i])return;
+  if(ch[i].br){delete ch[i].br;}
+  else{
+    let s=0;for(let k=i-1;k>=0;k--){if(ch[k].br){s=k+1;break}}
+    const lb=ch.slice(s,i+1).reduce((a,c)=>a+(c.beats||bpb),0);
+    let e=ch.length-1;for(let k=i+1;k<ch.length;k++){if(ch[k].br){e=k;break}}
+    const nb=ch.slice(i+1,e+1).reduce((a,c)=>a+(c.beats||bpb),0);
+    if(lb<bpb || (i<ch.length-1 && nb<bpb)){flash('Cada línea debe tener al menos 1 compás');return}
+    ch[i].br=true;
+  }
+  refWrite(ref,ch);refCommit(ref);
+}
+function gcClear(tok){const ref=parseRef(tok);const a=refGet(ref);a.forEach(c=>delete c.br);refWrite(ref,a);refCommit(ref)}
+function gcAutoBars(tok){
+  const ref=parseRef(tok);const bpb=sigBeats();const a=refGet(ref);let acc=0;
+  a.forEach(c=>delete c.br);
+  a.forEach((c,i)=>{acc+=(c.beats||bpb);if(acc>=bpb-1e-6 && i<a.length-1){c.br=true;acc=0}});
+  refWrite(ref,a);refCommit(ref);flash('Líneas de 1 compás');
+}
+/* Add a paragraph (line) of N bars — validated against the max. */
+function gcAddLine(tok,n){
+  const ref=parseRef(tok);const bpb=sigBeats();n=Math.max(1,parseInt(n)||1);
+  const arr=refGet(ref);const total=arr.reduce((s,c)=>s+(c.beats||bpb),0);const add=n*bpb;
+  if(total+add>refMaxBeats(ref)+1e-6){flash(`Máximo ${Math.round(refMaxBeats(ref)/bpb)} compases`);return}
+  if(arr.length)arr[arr.length-1].br=true;
+  arr.push({name:'C',beats:add});            // one chord spanning N bars (resize/split later)
+  refWrite(ref,arr);refCommit(ref);
+}
+function gcRemoveLine(tok,li){
+  const ref=parseRef(tok);const arr=refGet(ref);const lines=chordsToLines(arr);
+  if(li<0||li>=lines.length)return;lines.splice(li,1);
+  refWrite(ref,linesToChords(lines));refCommit(ref);
+}
+/* Move a chord (by global index) to another line + position (drag-and-drop). */
+function moveChordAcross(ref,fromIdx,toLine,toPos){
+  const arr=refGet(ref);const lines=chordsToLines(arr);
+  let si=-1,sj=-1,idx=0;
+  for(let i=0;i<lines.length&&si<0;i++)for(let j=0;j<lines[i].length;j++){if(idx===fromIdx){si=i;sj=j;break}idx++}
+  if(si<0)return;
+  const [m]=lines[si].splice(sj,1);
+  if(lines[si].length===0){lines.splice(si,1);if(toLine>si)toLine--;}
+  if(!lines.length)lines.push([]);
+  const tl=Math.max(0,Math.min(lines.length-1,toLine));
+  const pos=Math.max(0,Math.min(lines[tl].length,toPos));
+  lines[tl].splice(pos,0,m);
+  refWrite(ref,linesToChords(lines));refCommit(ref);
+}
+
+/* ── Shared line-stack renderer ── */
+function renderChordLineStack(ref,chords){
+  const bpb=sigBeats();const tok=refTok(ref);const inputId='addbars_'+tok.replace(/\|/g,'_');
+  const lines=chordsToLines(chords);
+  const dataAttrs=ref.type==='prog'?`data-prog="${ref.progId}"`:`data-ch="${ref.ci}" data-block="${ref.bi}"`;
+  let stack='<div class="chord-line-stack">';let g=0;
+  lines.forEach((ln,li)=>{
+    const lineBeats=ln.reduce((s,c)=>s+(c.beats||bpb),0)||bpb;
+    const barCount=Math.max(1,Math.round(lineBeats/bpb));
+    stack+=`<div class="chord-line"><div class="chord-line-head"><span class="chord-line-label">L${li+1}</span><span class="chord-line-beats">${lineBeats}b · ${barCount} bar${barCount!==1?'s':''}</span>${lines.length>1?`<button class="cl-line-del" onclick="gcRemoveLine('${tok}',${li})" title="Eliminar esta línea">×</button>`:''}</div>`;
+    stack+=`<div class="pattern-timeline-wrap"><div class="pattern-bar-ruler">`;
+    let drawn=0,barN=1;while(drawn<lineBeats-1e-3){const cell=Math.min(bpb,lineBeats-drawn);stack+=`<div class="pattern-bar-cell" style="flex:${cell}"><span class="pattern-bar-num">${barN}</span></div>`;drawn+=cell;barN++}
+    stack+=`</div><div class="chord-slots pattern-slots-inner" ${dataAttrs} data-line="${li}" data-linebeats="${lineBeats}">`;
+    ln.forEach((c,pos)=>{
+      const i=g++;
+      stack+=`<div class="chord-slot" data-idx="${i}" data-line="${li}" data-linepos="${pos}" draggable="false" style="flex-grow:${c.beats};flex-shrink:1;flex-basis:0">
+        <button class="chord-grip" title="Arrastrar para mover de línea / reordenar">⠿</button>
+        <button class="chord-break-btn${c.br?' on':''}" onclick="gcToggleBreak('${tok}',${i})" title="${c.br?'Quitar salto de línea':'Salto de línea (mín. 1 compás)'}">↵</button>
+        <div class="chord-name" contenteditable onblur="gcUpdateName('${tok}',${i},this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">${escapeHTML(c.name)}</div>
+        <span class="chord-beats">${c.beats}b</span>
+        <div class="chord-resize" data-idx="${i}" title="Redimensionar (puede ocupar más de 1 compás)"></div>
+      </div>`;
+    });
+    if(li===lines.length-1)stack+=`<button class="chord-add-slot" onclick="gcAddChord('${tok}')" title="Agregar acorde">+</button>`;
+    stack+=`</div></div></div>`;
+  });
+  const maxBars=Math.round(refMaxBeats(ref)/bpb);
+  const usedBars=Math.round(chords.reduce((s,c)=>s+(c.beats||bpb),0)/bpb*10)/10;
+  stack+=`<div class="cl-addline"><span class="cl-addline-lbl">Agregar línea de</span><input type="number" min="1" max="${maxBars}" value="1" class="cl-bars-input" id="${inputId}"><span class="cl-addline-lbl">compás(es)</span><button class="cl-btn" onclick="gcAddLine('${tok}',document.getElementById('${inputId}').value)">+ Línea</button><span class="cl-hint">${usedBars}/${maxBars} compases</span></div>`;
+  stack+='</div>';
+  return stack;
+}
+
+/* Resize handles (any line container), allowing growth beyond one bar up to max. */
+function bindChordResizeGeneric(container){
+  const ref=refFromContainer(container);if(!ref)return;
+  const lineBeats=parseFloat(container.dataset.linebeats)||sigBeats();
+  container.querySelectorAll('.chord-resize').forEach(handle=>{
+    handle.addEventListener('mousedown',md=>{
+      md.preventDefault();md.stopPropagation();
+      const idx=parseInt(handle.dataset.idx);
+      const startX=md.clientX;
+      const base=refGet(ref).map(c=>({...c}));
+      const hasNeighbor=!!container.querySelector(`.chord-slot[data-idx="${idx+1}"]`);
+      const pxPerBeat=container.getBoundingClientRect().width/lineBeats;
+      handle.classList.add('dragging');document.body.style.cursor='col-resize';
+      function move(mv){
+        const delta=(mv.clientX-startX)/pxPerBeat;
+        const live=refGet(ref);
+        if(hasNeighbor){
+          const maxThis=base[idx].beats+base[idx+1].beats-0.5;
+          const nb=clamp(round2(base[idx].beats+delta),0.5,Math.max(0.5,maxThis));
+          live[idx].beats=nb;
+          live[idx+1].beats=clamp(round2(base[idx+1].beats-(nb-base[idx].beats)),0.5,maxThis);
+        }else{
+          const others=base.reduce((s,c,k)=>s+(k===idx?0:c.beats),0);
+          const free=refMaxBeats(ref)-others;
+          live[idx].beats=clamp(round2(base[idx].beats+delta),0.5,Math.max(0.5,free));
+        }
+        container.querySelectorAll('.chord-slot').forEach(slot=>{const k=parseInt(slot.dataset.idx);if(live[k]){slot.style.flexGrow=live[k].beats;const l=slot.querySelector('.chord-beats');if(l)l.textContent=live[k].beats+'b'}});
+        updateChordFill(ref);
+      }
+      function up(){handle.classList.remove('dragging');document.body.style.cursor='';document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);refCommit(ref)}
+      document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+    });
   });
 }
+
+/* Cross-line drag-and-drop (grip-initiated). Binds every chord slot + line container. */
+let _dnd=null;
+function bindChordDnDAll(){
+  document.querySelectorAll('.chord-slots .chord-slot').forEach(slot=>{
+    const grip=slot.querySelector('.chord-grip');if(!grip)return;
+    grip.addEventListener('mousedown',()=>slot.setAttribute('draggable','true'));
+    grip.addEventListener('touchstart',()=>slot.setAttribute('draggable','true'),{passive:true});
+    slot.addEventListener('dragstart',e=>{const ref=refFromContainer(slot);_dnd={ref,fromIdx:parseInt(slot.dataset.idx)};e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','')}catch(_){}slot.classList.add('dragging')});
+    slot.addEventListener('dragend',()=>{slot.classList.remove('dragging');slot.setAttribute('draggable','false')});
+    slot.addEventListener('dragover',e=>{const ref=refFromContainer(slot);if(_dnd&&refEq(_dnd.ref,ref)){e.preventDefault();slot.classList.add('drag-over')}});
+    slot.addEventListener('dragleave',()=>slot.classList.remove('drag-over'));
+    slot.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();slot.classList.remove('drag-over');const ref=refFromContainer(slot);if(_dnd&&refEq(_dnd.ref,ref)){moveChordAcross(ref,_dnd.fromIdx,parseInt(slot.dataset.line),parseInt(slot.dataset.linepos))}_dnd=null});
+  });
+  document.querySelectorAll('.chord-slots').forEach(cont=>{
+    cont.addEventListener('dragover',e=>{const ref=refFromContainer(cont);if(_dnd&&refEq(_dnd.ref,ref))e.preventDefault()});
+    cont.addEventListener('drop',e=>{if(e.target.closest('.chord-slot'))return;e.preventDefault();const ref=refFromContainer(cont);if(_dnd&&refEq(_dnd.ref,ref)){const line=parseInt(cont.dataset.line);const count=cont.querySelectorAll('.chord-slot').length;moveChordAcross(ref,_dnd.fromIdx,line,count)}_dnd=null});
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MUSS · LIBRARY + ROUTER
+   Integration layer that sits on top of the workbench.
+   - Holds the user's song library (persisted to localStorage)
+   - Renders the dashboard (grid / list / searchable table)
+   - Routes between the library screen and the workbench screen
+   - Loads a song into the workbench STATE and saves edits back
+   ═══════════════════════════════════════════════════════════════ */
+
+const LIB = {
+  records: [],          // [{ libId, song, genre, favorite, createdAt, updatedAt }]
+  sort: 'artist',       // artist | title | genre | bpm
+  sortDir: 1,           // 1 asc, -1 desc (table headers toggle this)
+  view: 'grid',         // grid | list | table
+  nav: 'all',           // all | recent | favorites
+  genre: null,          // genre filter or null
+  search: '',
+  current: null,        // libId currently open in the workbench
+};
+const LIB_KEY = 'muss_library_v2';
+
+const GENRE_COLORS = {
+  Rock:'var(--g-rock)', Pop:'var(--g-pop)', Jazz:'var(--g-jazz)', Metal:'var(--g-metal)',
+  Folk:'var(--g-folk)', Blues:'var(--g-blues)', Latin:'var(--g-latin)', Indie:'var(--g-indie)',
+  Country:'var(--g-country)', Other:'var(--g-other)'
+};
+const genreColor = g => GENRE_COLORS[g] || 'var(--ink-faint)';
+
+const ARTIST_PALETTE = ['#4f6ef7','#2a9d8f','#e05c3a','#c46bb0','#c08040','#4fa8b8','#4aab6d','#d4521e','#7c69f5'];
+function hashColor(str){
+  let h=0; for(const c of (str||'')) h=(h*31+c.charCodeAt(0))>>>0;
+  return ARTIST_PALETTE[h%ARTIST_PALETTE.length];
+}
+
+/* ── Persistence ─────────────────────────────────────────────── */
+function libSave(){ try{ localStorage.setItem(LIB_KEY, JSON.stringify(LIB.records)); }catch(e){} }
+function libLoad(){
+  try{ const d=localStorage.getItem(LIB_KEY); if(d) LIB.records=JSON.parse(d); }catch(e){ LIB.records=[]; }
+}
+
+/* ── Record helpers (read derived metadata from the muss song) ── */
+const meta = {
+  title: r => r.song.title || 'Sin título',
+  artist: r => r.song.artist || 'Artista desconocido',
+  genre: r => r.genre || r.song.genre || '',
+  bpm: r => r.song.bpm || 0,
+  sig: r => r.song.signature || '4/4',
+  link: r => r.song.link || '',
+  channels: r => (r.song.channels || []).map(c => c.type),
+};
+
+/* Build a blank muss song (mirrors workbench defaults) */
+function blankSong(info){
+  const chId = uid();
+  const blId = uid();
+  return {
+    title: info.title || '',
+    artist: info.artist || '',
+    genre: info.genre || '',
+    link: info.link || '',
+    bpm: info.bpm || 120,
+    signature: info.signature || '4/4',
+    channels: [{ id: chId, name:'Vocals', type:'lyrics', color:'#4f6ef7', muted:false }],
+    blocks: [{ id: blId, section:'VERSE', bars:4, enabled:true, comment:'', content:{ [chId]:{ text:'' } } }],
+    progressions: [],
+    library: { riffs: [] },
+  };
+}
+
+/* Normalize an imported / loaded song so the workbench can render it */
+function normalizeSong(song){
+  song.channels = song.channels || [];
+  song.blocks = song.blocks || [];
+  song.progressions = song.progressions || [];
+  if(!song.library) song.library = { riffs: [] };
+  if(!song.library.riffs) song.library.riffs = [];
+  return song;
+}
+
+/* ── Filtering & sorting ─────────────────────────────────────── */
+function libFiltered(){
+  let list = [...LIB.records];
+  const q = LIB.search.toLowerCase().trim();
+  if(q) list = list.filter(r => meta.title(r).toLowerCase().includes(q) || meta.artist(r).toLowerCase().includes(q));
+  if(LIB.nav === 'favorites') list = list.filter(r => r.favorite);
+  if(LIB.nav === 'recent'){ const cut = Date.now()-8.64e7*30; list = list.filter(r => (r.updatedAt||r.createdAt) > cut); }
+  if(LIB.genre) list = list.filter(r => meta.genre(r) === LIB.genre);
+  return list;
+}
+function libSorted(list){
+  const k = LIB.sort, dir = LIB.sortDir;
+  return [...list].sort((a,b)=>{
+    if(k==='bpm') return (meta.bpm(b)-meta.bpm(a))*dir*-1; // bpm default high→low when asc feels natural
+    const va=(k==='title'?meta.title(a):k==='genre'?meta.genre(a):meta.artist(a)).toLowerCase();
+    const vb=(k==='title'?meta.title(b):k==='genre'?meta.genre(b):meta.artist(b)).toLowerCase();
+    return (va<vb?-1:va>vb?1:0)*dir;
+  });
+}
+function libGrouped(list){
+  const k = LIB.sort, groups = {};
+  list.forEach(r=>{
+    let g='';
+    if(k==='artist') g=meta.artist(r);
+    else if(k==='genre') g=meta.genre(r)||'Sin género';
+    else if(k==='title') g=meta.title(r).charAt(0).toUpperCase();
+    (groups[g] ||= []).push(r);
+  });
+  return groups;
+}
+
+/* ── Render: counts, genres, list ────────────────────────────── */
+function libRender(){ libUpdateCounts(); libRenderGenres(); libRenderList(); }
+
+function libUpdateCounts(){
+  const all = LIB.records.length;
+  const recent = LIB.records.filter(r => (r.updatedAt||r.createdAt) > Date.now()-8.64e7*30).length;
+  const fav = LIB.records.filter(r => r.favorite).length;
+  $('#cntAll').textContent = all;
+  $('#cntRecent').textContent = recent;
+  $('#cntFav').textContent = fav;
+  const vis = libFiltered().length;
+  const titles = { all:'Todas las canciones', recent:'Recientes', favorites:'Favoritas' };
+  const sub = `${vis} canción${vis!==1?'es':''}${LIB.genre?` · ${escapeHTML(LIB.genre)}`:''}`;
+  $('#libTitle').innerHTML = `${escapeHTML(titles[LIB.nav])} <span>— ${sub}</span>`;
+}
+
+function libRenderGenres(){
+  const counts = {};
+  LIB.records.forEach(r => { const g=meta.genre(r); (counts[g] ??= 0, counts[g]++); });
+  const el = $('#libGenres'); el.innerHTML='';
+  const all = document.createElement('div');
+  all.className = 'lib-genre'+(LIB.genre===null?' active':'');
+  all.innerHTML = `<div class="lib-dot" style="background:var(--accent-dim)"></div><span class="lib-genre-name">Todos</span><span class="lib-genre-count">${LIB.records.length}</span>`;
+  all.onclick = ()=>{ LIB.genre=null; libRender(); };
+  el.appendChild(all);
+  Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([g,c])=>{
+    const d = document.createElement('div');
+    d.className = 'lib-genre'+(LIB.genre===g?' active':'');
+    d.innerHTML = `<div class="lib-dot" style="background:${genreColor(g)}"></div><span class="lib-genre-name">${escapeHTML(g||'Sin género')}</span><span class="lib-genre-count">${c}</span>`;
+    d.onclick = ()=>{ LIB.genre=g; libRender(); };
+    el.appendChild(d);
+  });
+}
+
+function libRenderList(){
+  const data = libSorted(libFiltered());
+  const box = $('#libList');
+
+  if(!data.length){
+    box.innerHTML = `<div class="lib-empty">
+      <div class="lib-empty-icon">♩</div>
+      <div class="lib-empty-title">No hay canciones aquí</div>
+      <div class="lib-empty-sub">Crea tu primera canción o importa un<br>archivo .muss.json para comenzar.</div>
+      <button class="lib-cta" onclick="libOpenNew()">+ Nueva canción</button>
+    </div>`;
+    return;
+  }
+
+  if(LIB.view === 'table'){ box.innerHTML = libTableHTML(data); return; }
+
+  // grid / list — group by sort key (except bpm = flat)
+  if(LIB.sort === 'bpm'){
+    box.innerHTML = `<div class="${LIB.view==='grid'?'lib-grid':'lib-list'}">${
+      data.map((r,i)=> LIB.view==='grid'? libCardHTML(r) : libRowHTML(r,i+1)).join('')
+    }</div>`;
+    return;
+  }
+  const groups = libGrouped(data);
+  let html='';
+  Object.keys(groups).forEach(key=>{
+    const songs = groups[key];
+    const isArtist = LIB.sort==='artist';
+    const color = isArtist ? hashColor(key) : genreColor(key);
+    const initial = (key||'?').charAt(0).toUpperCase();
+    html += `<div class="lib-group">
+      <div class="lib-group-head">
+        <div class="lib-avatar" style="background:${color}">${escapeHTML(initial)}</div>
+        <div class="lib-group-name">${escapeHTML(key||'Desconocido')}</div>
+        <div class="lib-group-count">${songs.length} canción${songs.length!==1?'es':''}</div>
+      </div>
+      <div class="${LIB.view==='grid'?'lib-grid':'lib-list'}">
+        ${songs.map((r,i)=> LIB.view==='grid'? libCardHTML(r) : libRowHTML(r,i+1)).join('')}
+      </div>
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+
+/* ── Templates ───────────────────────────────────────────────── */
+function chDotsHTML(chans){
+  return ['lyrics','rhythm','lead','bass','drums','keys']
+    .map(c=>`<div class="lib-chdot ${chans.includes(c)?'on':''}"></div>`).join('');
+}
+
+function libCardHTML(r){
+  const g = meta.genre(r), bg = hashColor(meta.artist(r)+meta.title(r));
+  const initial = meta.title(r).charAt(0).toUpperCase();
+  return `<div class="lib-card" onclick="libOpen('${r.libId}')">
+    <div class="lib-thumb" style="background:linear-gradient(135deg,${bg}22,${bg}55)">
+      <div class="lib-thumb-letter" style="color:${bg}">${escapeHTML(initial)}</div>
+      ${g?`<div class="lib-badge" style="background:${genreColor(g)}">${escapeHTML(g)}</div>`:''}
+      <div class="lib-play"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M7 5l10 5-10 5V5z"/></svg></div>
+    </div>
+    <div class="lib-card-ov">
+      <button class="lib-mini fav ${r.favorite?'on':''}" onclick="event.stopPropagation();libFav('${r.libId}')" title="Favorito">${r.favorite?'♥':'♡'}</button>
+      <button class="lib-mini del" onclick="event.stopPropagation();libDelete('${r.libId}')" title="Eliminar">✕</button>
+    </div>
+    <div class="lib-card-body">
+      <div class="lib-card-title">${escapeHTML(meta.title(r))}</div>
+      <div class="lib-card-artist">${escapeHTML(meta.artist(r))}</div>
+      <div class="lib-card-meta">
+        <span class="lib-bpm">${meta.bpm(r)||'—'} bpm</span>
+        <span class="lib-sig">${escapeHTML(meta.sig(r))}</span>
+        <div class="lib-chans">${chDotsHTML(meta.channels(r))}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function libRowHTML(r,i){
+  return `<div class="lib-row" onclick="libOpen('${r.libId}')">
+    <div class="lib-row-num">${i}</div>
+    <div class="lib-row-info">
+      <div class="lib-row-title">${escapeHTML(meta.title(r))}</div>
+      <div class="lib-row-artist">${escapeHTML(meta.artist(r))}</div>
+    </div>
+    <div class="lib-dot" style="background:${genreColor(meta.genre(r))}" title="${escapeHTML(meta.genre(r))}"></div>
+    <div class="lib-row-bpm">${meta.bpm(r)||'—'} bpm</div>
+    <div class="lib-row-sig">${escapeHTML(meta.sig(r))}</div>
+    <div class="lib-row-acts">
+      <button class="lib-num fav ${r.favorite?'on':''}" onclick="event.stopPropagation();libFav('${r.libId}')" title="Favorito">${r.favorite?'♥':'♡'}</button>
+      <button class="lib-num del" onclick="event.stopPropagation();libDelete('${r.libId}')" title="Eliminar">✕</button>
+    </div>
+  </div>`;
+}
+
+/* Searchable table view with sortable headers */
+function libTableHTML(data){
+  const cols = [
+    { k:'#',        label:'#',        cls:'col-num' },
+    { k:'title',    label:'Título',   sort:'title' },
+    { k:'artist',   label:'Artista',  sort:'artist' },
+    { k:'genre',    label:'Género',   sort:'genre', cls:'col-genre' },
+    { k:'bpm',      label:'BPM',      sort:'bpm', cls:'center' },
+    { k:'sig',      label:'Compás',   cls:'center col-sig' },
+    { k:'chans',    label:'Canales',  cls:'center col-chans' },
+    { k:'acts',     label:'',         cls:'center' },
+  ];
+  const arrow = c => c.sort===LIB.sort ? `<span class="arr">${LIB.sortDir>0?'▲':'▼'}</span>` : '';
+  const head = cols.map(c=>{
+    const sortable = c.sort ? `onclick="libSortTable('${c.sort}')"` : '';
+    return `<th class="${c.cls||''}" ${sortable}>${c.label}${c.sort?arrow(c):''}</th>`;
+  }).join('');
+
+  const rows = data.map((r,i)=>`<tr onclick="libOpen('${r.libId}')">
+    <td class="lib-td-mono lib-td-center col-num">${i+1}</td>
+    <td><div class="lib-td-title">${escapeHTML(meta.title(r))}</div></td>
+    <td>${escapeHTML(meta.artist(r))}</td>
+    <td class="col-genre">${meta.genre(r)?`<span class="lib-pill"><span class="lib-dot" style="background:${genreColor(meta.genre(r))}"></span>${escapeHTML(meta.genre(r))}</span>`:'<span style="color:var(--ink-faint)">—</span>'}</td>
+    <td class="lib-td-mono lib-td-center">${meta.bpm(r)||'—'}</td>
+    <td class="lib-td-mono lib-td-center col-sig">${escapeHTML(meta.sig(r))}</td>
+    <td class="lib-td-center col-chans"><div class="lib-chans" style="justify-content:center">${chDotsHTML(meta.channels(r))}</div></td>
+    <td>
+      <div class="lib-td-acts">
+        <button class="lib-num fav ${r.favorite?'on':''}" onclick="event.stopPropagation();libFav('${r.libId}')" title="Favorito">${r.favorite?'♥':'♡'}</button>
+        <button class="lib-num del" onclick="event.stopPropagation();libDelete('${r.libId}')" title="Eliminar">✕</button>
+      </div>
+    </td>
+  </tr>`).join('');
+
+  return `<div class="lib-table-wrap"><table class="lib-table">
+    <thead><tr>${head}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+/* ── Actions ─────────────────────────────────────────────────── */
+function libFav(id){
+  const r = LIB.records.find(x=>x.libId===id); if(!r) return;
+  r.favorite = !r.favorite; libSave(); libRender();
+  flash(r.favorite?'Agregado a favoritas':'Removido de favoritas');
+}
+function libDelete(id){
+  const r = LIB.records.find(x=>x.libId===id); if(!r) return;
+  if(!confirm(`¿Eliminar "${meta.title(r)}"?`)) return;
+  LIB.records = LIB.records.filter(x=>x.libId!==id);
+  libSave(); libRender(); flash('Canción eliminada');
+}
+function libSortTable(k){
+  if(LIB.sort===k) LIB.sortDir*=-1; else { LIB.sort=k; LIB.sortDir=1; }
+  $$('#libSort button').forEach(b=>b.classList.toggle('active', b.dataset.sort===k));
+  libRender();
+}
+
+/* ── New song modal ──────────────────────────────────────────── */
+function libOpenNew(){
+  ['ns_title','ns_artist','ns_link'].forEach(i=>$('#'+i).value='');
+  $('#ns_genre').value=''; $('#ns_bpm').value='120'; $('#ns_sig').value='4/4';
+  $('#newSongModal').classList.add('show');
+  setTimeout(()=>$('#ns_title').focus(),60);
+}
+function libCloseNew(){ $('#newSongModal').classList.remove('show'); }
+function libCreateNew(){
+  const title = $('#ns_title').value.trim();
+  if(!title){ $('#ns_title').focus(); return; }
+  const song = blankSong({
+    title,
+    artist: $('#ns_artist').value.trim(),
+    genre: $('#ns_genre').value,
+    bpm: parseInt($('#ns_bpm').value)||120,
+    signature: $('#ns_sig').value,
+    link: $('#ns_link').value.trim(),
+  });
+  const rec = { libId:uid(), song, genre:song.genre, favorite:false, createdAt:Date.now(), updatedAt:Date.now() };
+  LIB.records.unshift(rec);
+  libSave(); libCloseNew();
+  flash(`"${title}" creada`);
+  libOpen(rec.libId);  // jump straight into the editor
+}
+
+/* ── Import .muss.json into the library ──────────────────────── */
+function libHandleImport(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      const song = normalizeSong(d.song || d);
+      if(!song.title) song.title='Sin título';
+      const rec = { libId:uid(), song, genre:song.genre||'', favorite:false, createdAt:Date.now(), updatedAt:Date.now() };
+      LIB.records.unshift(rec);
+      libSave(); libRender();
+      flash(`"${song.title}" importada`);
+    }catch(err){ alert('Error al importar: '+err.message); }
+  };
+  r.readAsText(f); e.target.value='';
+}
+
+/* ════════ ROUTER ════════ */
+function showScreen(name){
+  $$('.screen').forEach(s=>s.classList.remove('active'));
+  $('#screen-'+name).classList.add('active');
+}
+
+/* Open a song record in the workbench */
+function libOpen(id){
+  const r = LIB.records.find(x=>x.libId===id); if(!r) return;
+  LIB.current = id;
+  // Deep copy so workbench edits don't mutate the library until we save back
+  STATE.song = normalizeSong(JSON.parse(JSON.stringify(r.song)));
+  STATE.ui.activeChannelId = STATE.song.channels[0]?.id || null;
+  STATE.ui.view = 'overview';
+  STATE.ui.currentBlockIndex = 0;
+  STATE.ui.currentBeat = 0;
+  $$('.view-tab').forEach(t=>t.classList.toggle('active', t.dataset.view==='overview'));
+  showScreen('workbench');
+  renderAll();
+  renderBeatLeds();
+  $('#autoScroll').classList.toggle('on', STATE.ui.autoScroll);
+}
+
+/* Persist current workbench edits back into the library, then go home */
+function libBack(){
+  if(STATE.ui.isPlaying) stopPlayback();
+  if(LIB.current){
+    const r = LIB.records.find(x=>x.libId===LIB.current);
+    if(r){
+      r.song = JSON.parse(JSON.stringify(STATE.song));
+      r.genre = STATE.song.genre || r.genre || '';
+      r.updatedAt = Date.now();
+      libSave();
+    }
+  }
+  LIB.current = null;
+  showScreen('library');
+  libRender();
+}
+
+/* ── Library event bindings ──────────────────────────────────── */
+function libBind(){
+  $('#libSearch').addEventListener('input', e=>{ LIB.search=e.target.value; libRender(); });
+  $$('#screen-library [data-nav]').forEach(el=>el.addEventListener('click',()=>{
+    LIB.nav = el.dataset.nav; LIB.genre=null;
+    $$('#screen-library [data-nav]').forEach(x=>x.classList.toggle('active', x===el));
+    libRender();
+  }));
+  $$('#libSort button').forEach(b=>b.addEventListener('click',()=>{
+    LIB.sort=b.dataset.sort; LIB.sortDir=1;
+    $$('#libSort button').forEach(x=>x.classList.toggle('active', x===b));
+    libRender();
+  }));
+  $$('#libView button').forEach(b=>b.addEventListener('click',()=>{
+    LIB.view=b.dataset.view;
+    $$('#libView button').forEach(x=>x.classList.toggle('active', x===b));
+    libRender();
+  }));
+  $('#libNewBtn').addEventListener('click', libOpenNew);
+  $('#libImportBtn').addEventListener('click', ()=>$('#libImportFile').click());
+  $('#libImportFile').addEventListener('change', libHandleImport);
+  $('#ns_cancel').addEventListener('click', libCloseNew);
+  $('#ns_create').addEventListener('click', libCreateNew);
+  // mobile sidebar
+  const toggleSide=()=>{ $('#libSidebar').classList.toggle('open'); $('#libOverlay').classList.toggle('show'); };
+  $('#libMenuBtn').addEventListener('click', toggleSide);
+  $('#libOverlay').addEventListener('click', toggleSide);
+  // modal mask click + keyboard
+  $('#newSongModal').addEventListener('click', e=>{ if(e.target.id==='newSongModal') libCloseNew(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape') $('#newSongModal').classList.remove('show');
+    if(e.key==='Enter' && $('#newSongModal').classList.contains('show')) libCreateNew();
+  });
+}
+
+/* ── Seed (first run): "Nunca Quise" by Intoxicados ──────────── */
+const SEED_SONGS = [{"title": "Nunca Quise", "artist": "Intoxicados", "link": "", "bpm": 120, "signature": "4/4", "blocks": [{"id": "id_e5azbab", "section": "INTRO", "bars": 9, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": ""}, "id_lfprcii": {"chords": [{"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "A", "beats": 4}, {"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "A", "beats": 4}, {"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 8}], "notes": ""}, "id_4clocjv": {"tab": "e|--------------------------------------------------------------------------------------------------------------------------------------|\nB|--------------------------------------------------------------------------------------------------------------------------------------|\nG|------------9/11-13/14--11--------------------9/11-13/14--11------9/7-6-----------------------4----6-----7---4------------------------|\nD|--------------------------------------------------------------------------------------------------------------------------------------|\nA|------------7/9--11/12--9---------------------7/9--11/12--9-------7/5--4----------------------2----4-----5---2------------------------|\nE|--------------------------------------------------------------------------------------------------------------------------------------|"}}}, {"id": "id_90t9ug4", "section": "VERSE", "bars": 8, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Nunca quise tanto a nadie como a vos\nPor eso es que empiezo a dudar\nSi seremos hermanos que nos separaron\nY nosotros, sin saberlo, nos volvimos a juntar"}, "id_lfprcii": {"chords": ["D", "Bm", "C#m", "F#m", "Bm", "E", "A", "A7"], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_d4c4bnw", "section": "VERSE", "bars": 8, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Tu sangre es roja, la mía también\nPero no me equivoco, algo tendremos que ver\nSomos indios latinos con guitarra eléctrica\nY comunicados a través de internet"}, "id_lfprcii": {"chords": [{"name": "D", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "C#m", "beats": 4}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 4}, {"name": "A", "beats": 4}, {"name": "A7", "beats": 4}], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_vqtky58", "section": "CHORUS", "bars": 9, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Para odiar, hay que querer\nPara destruir, hay que hacer\nY estoy orgulloso de quererte romper\nLa cabeza contra la pared, sí"}, "id_lfprcii": {"chords": [{"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "A", "beats": 4}, {"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "A", "beats": 4}, {"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 8}], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_rjhpuc5", "section": "VERSE", "bars": 8, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Y por todas esas cosas que tenemos en común\nHace tiempo ya marchaste de acá\nTe cansaste de mí, yo me cansé de vos\nPero cuando nos miramos sabemos que no es verdad"}, "id_lfprcii": {"chords": [{"name": "D", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "C#m", "beats": 4}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 4}, {"name": "A", "beats": 4}, {"name": "A7", "beats": 4}], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_fne07db", "section": "VERSE", "bars": 8, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Porque tanto te quise y tanto te quiero\nSiempre, una marca tuya, llevará mi corazón\nDisculpa si te parece raro, pero comparto la opinión\nQue escuché en una canción (let it be)"}, "id_lfprcii": {"chords": [{"name": "D", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "C#m", "beats": 4}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 4}, {"name": "A", "beats": 4}, {"name": "A7", "beats": 4}], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_7bwefzm", "section": "VERSE", "bars": 8, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Si la amas, déjala ser, si la quieres, déjala volar\nNunca fui tu patrón, no quisiera cambiarte\nY no quiero que pierdas tu personalidad"}, "id_lfprcii": {"chords": [{"name": "D", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "C#m", "beats": 4}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 4}, {"name": "A", "beats": 4}, {"name": "A7", "beats": 4}], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_k5cyc7x", "section": "CHORUS", "bars": 8, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Para odiar, hay que querer\nPara destruir, hay que hacer\nY estoy orgulloso de quererte romper\nLa cabeza contra la pared, sí"}, "id_lfprcii": {"chords": [], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_q3g7r0h", "section": "CHORUS", "bars": 4, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Para odiar, hay que querer\nPara destruir, hay que hacer\nY estoy orgulloso de quererte romper\nLa cabeza contra la pared"}, "id_lfprcii": {"chords": [], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_61rd3tu", "section": "VERSE", "bars": 4, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Para dejar, hay que beber\nPara morir, primero, hay que nacer\nSiento ganas nuevamente de tirarme a tus pies\nY llevarte a mi morada otra vez"}, "id_lfprcii": {"chords": [], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}, {"id": "id_urqvctj", "section": "VERSE", "bars": 4, "enabled": true, "comment": "", "content": {"id_elmycwc": {"text": "Si lo sembrás, lo recogés\nY si esperás, vas a entender\nCuando las cosas salen como no las espero\nLa vida me hace más guerrero"}, "id_lfprcii": {"chords": [], "notes": ""}, "id_4clocjv": {"tab": "e|----------------|\nB|----------------|\nG|----------------|\nD|----------------|\nA|----------------|\nE|----------------|"}}}], "channels": [{"id": "id_elmycwc", "name": "Vocals", "type": "lyrics", "color": "#4f6ef7", "muted": false}, {"id": "id_lfprcii", "name": "Ritmica", "type": "rhythm", "color": "#2a9d8f", "muted": false}, {"id": "id_4clocjv", "name": "Primera", "type": "lead", "color": "#e05c3a", "muted": false}], "progressions": [{"id": "id_fufpwcn", "name": "Verso_Chords_8", "chords": [{"name": "D", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "C#m", "beats": 4}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 4}, {"name": "A", "beats": 4}, {"name": "A7", "beats": 4}]}, {"id": "id_8oroozy", "name": "IntrCoro_Chords_9", "chords": [{"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "A", "beats": 4}, {"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "A", "beats": 4}, {"name": "D", "beats": 2}, {"name": "E", "beats": 2}, {"name": "F#m", "beats": 4}, {"name": "Bm", "beats": 4}, {"name": "E", "beats": 8}]}], "genre": "Rock"}];
+function librarySeed(){
+  SEED_SONGS.forEach((song, i)=>{
+    LIB.records.push({
+      libId: uid(),
+      song: normalizeSong(song),
+      genre: song.genre || '',
+      favorite: i===0,
+      createdAt: Date.now() - i*8.64e7,
+      updatedAt: Date.now() - i*8.64e7,
+    });
+  });
+}
+
 
 init();
 </script>
