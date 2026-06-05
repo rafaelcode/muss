@@ -1,0 +1,387 @@
+/* ═══════ OVERVIEW · columnar (one column per channel) ═══════ */
+.ov-grid-wrap{overflow-x:auto;overflow-y:visible;padding-bottom:8px}
+.ov-channel-head{
+  display:grid;gap:0;position:sticky;top:0;z-index:8;
+  background:var(--bg-1);border-bottom:1px solid var(--line-mid);
+  margin-bottom:8px;min-width:max-content;
+}
+.ov-ch-cell{
+  padding:8px 12px;border-left:1px solid var(--line);
+  display:flex;align-items:center;gap:7px;
+}
+.ov-ch-cell:first-child{border-left:none}
+.ov-ch-swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0;background:var(--ch-color,var(--accent))}
+.ov-ch-title{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+.ov-ch-sub{font-size:8px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.1em}
+.ov-ch-gutter{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+
+.ov-row{
+  display:grid;gap:0;min-width:max-content;
+  margin-bottom:8px;border:1px solid var(--line-mid);
+  background:var(--bg-0);border-radius:10px;overflow:hidden;
+  transition:box-shadow .15s,border-color .15s;position:relative;
+}
+.ov-row:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.ov-row.disabled{opacity:.32}
+.ov-row.current{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.ov-row.dragging{opacity:.35}
+.ov-row.drag-over{border-color:var(--accent)}
+
+/* gutter cell (block number + section + bars) */
+.ov-gutter{
+  background:var(--bg-1);border-right:1px solid var(--line);
+  padding:10px 10px;display:flex;flex-direction:column;gap:7px;cursor:grab;
+}
+.ov-gutter:active{cursor:grabbing}
+.ov-gutter-top{display:flex;align-items:baseline;gap:6px}
+.ov-gutter-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;color:var(--ink-dim);line-height:1}
+.ov-gutter-beats{font-size:8px;color:var(--ink-faint);letter-spacing:.06em}
+.ov-gutter-bars{display:flex;align-items:center;gap:5px}
+.ov-gutter-bars label{font-size:8px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em}
+
+/* channel cell */
+.ov-cell{
+  padding:10px 12px;border-left:1px solid var(--line);min-width:0;position:relative;
+  display:flex;flex-direction:column;gap:6px;
+}
+.ov-cell.muted{background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(0,0,0,.018) 6px,rgba(0,0,0,.018) 12px)}
+.ov-cell-empty{color:var(--ink-faint);font-size:12px;font-style:italic;opacity:.6}
+
+/* lyrics cell keeps the editable textarea */
+.ov-cell .ov-lyric-edit{min-height:40px}
+
+/* repeat / pattern badges */
+.ov-repeat{
+  display:inline-flex;align-items:center;gap:4px;align-self:flex-start;
+  font-size:9px;font-weight:600;letter-spacing:.04em;
+  background:var(--accent-bg);color:var(--accent);border:1px solid rgba(79,110,247,.2);
+  padding:2px 7px;border-radius:20px;white-space:nowrap;
+}
+.ov-repeat.pattern{background:var(--bg-2);color:var(--ink-dim);border-color:var(--line-mid)}
+.ov-repeat svg{width:9px;height:9px}
+
+/* time-respecting chord lane */
+.ov-chord-lane{
+  display:flex;gap:3px;align-items:stretch;width:100%;
+}
+.ov-chord-cell{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--accent-bg);border:1px solid rgba(79,110,247,.18);border-radius:5px;
+  padding:4px 2px;min-width:0;overflow:hidden;
+}
+.ov-chord-cell .nm{font-family:'Fraunces',serif;font-size:13px;font-weight:500;color:var(--accent);line-height:1.1;white-space:nowrap}
+.ov-chord-cell .bt{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--accent-dim);opacity:.8;margin-top:1px}
+.ov-bar-ticks{display:flex;width:100%;margin-top:2px;height:3px;gap:0}
+.ov-bar-tick{flex:1;border-left:1px solid var(--line-mid);height:100%}
+.ov-bar-tick:first-child{border-left:none}
+
+/* tab preview cell */
+.ov-tab{
+  font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.5;color:var(--ink-dim);
+  white-space:pre;overflow-x:auto;background:var(--bg-1);border:1px solid var(--line);
+  border-radius:6px;padding:6px 8px;max-height:120px;
+}
+.ov-notes{font-size:12px;color:var(--ink-dim);line-height:1.5;white-space:pre-wrap}
+
+/* drum mini grid */
+.ov-drum{display:flex;flex-direction:column;gap:2px}
+.ov-drum-row{display:flex;align-items:center;gap:4px}
+.ov-drum-lab{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink-faint);width:16px;flex-shrink:0}
+.ov-drum-dots{display:flex;gap:1px;flex:1}
+.ov-drum-dot{flex:1;height:7px;background:var(--bg-3);border-radius:1px;max-width:8px}
+.ov-drum-dot.on{background:var(--ch-color,var(--accent))}
+
+/* actions cell */
+.ov-acts{
+  border-left:1px solid var(--line);background:var(--bg-1);
+  display:flex;flex-direction:column;gap:4px;padding:8px 4px;align-items:center;
+}
+.ov-acts button{
+  background:transparent;border:1px solid var(--line-mid);color:var(--ink-faint);
+  width:22px;height:22px;cursor:pointer;border-radius:5px;font-size:11px;line-height:1;transition:all .1s;
+}
+.ov-acts button:hover{background:var(--bg-2);color:var(--ink)}
+.ov-acts button.toggle-on{background:var(--green);color:#fff;border-color:var(--green)}
+.ov-acts button.del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+
+.ov-row .block-progress{position:absolute;bottom:0;left:0;height:2px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow);z-index:5;border-radius:0 1px 0 0}
+
+/* channel visibility toggles in the header bar */
+.ov-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ov-vis{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.ov-vis-chip{
+  display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none;
+  border:1px solid var(--line-mid);background:var(--bg-1);border-radius:20px;
+  padding:3px 9px;font-size:10px;font-weight:500;color:var(--ink-dim);transition:all .1s;
+}
+.ov-vis-chip .sw{width:8px;height:8px;border-radius:50%;background:var(--ch-color,var(--accent))}
+.ov-vis-chip.off{opacity:.45;text-decoration:line-through}
+.ov-vis-chip:hover{border-color:var(--line-strong);color:var(--ink)}
+
+@media(max-width:640px){
+  .ov-gutter{padding:8px 7px}
+  .ov-cell{padding:8px 9px}
+}
+
+
+/* ═══════ OVERVIEW v2 · chords above lyrics + overflow fix ═══════ */
+/* Let columns fit the viewport instead of forcing max-content width
+   (fixes the chord lane spilling / empty-space issue). */
+.ov-grid-wrap{overflow-x:auto}
+.ov-channel-head,.ov-row{min-width:0}
+
+/* Chord lane sits ABOVE the lyrics, aligned to the paragraph width. */
+.ov-lyric-chords{
+  display:flex;flex-direction:column;gap:3px;
+  margin-bottom:9px;padding-bottom:9px;
+  border-bottom:1px dashed var(--line);
+}
+.ov-lc-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px}
+
+/* The lane never breaks the grid: if too many chords, it scrolls in place. */
+.ov-chord-lane{overflow-x:auto;padding-bottom:1px}
+.ov-chord-cell{min-width:30px}
+
+/* Slightly lighter chips when shown over the letra (lead-sheet feel). */
+.ov-lyric-chords .ov-chord-cell{
+  background:transparent;border:none;border-radius:0;
+  border-right:1px solid var(--line);padding:0 4px 2px;align-items:flex-start;
+}
+.ov-lyric-chords .ov-chord-cell:last-child{border-right:none}
+.ov-lyric-chords .ov-chord-cell .nm{font-size:14px;font-weight:600}
+.ov-lyric-chords .ov-chord-cell .bt{font-size:8px}
+.ov-lyric-chords .ov-bar-ticks{margin-top:3px}
+
+/* Lyrics text directly under the chords reads as a verse. */
+.ov-cell .ov-lyric-edit{min-height:32px;font-style:italic}
+
+
+/* ═══════ OVERVIEW v3 · per-line chords + mode toggle ═══════ */
+.ov-mode{flex-shrink:0}
+.ov-mode button{font-size:10px;padding:4px 10px}
+
+/* Lyrics display (merged mode): clickable, lines stacked. */
+.ov-lyrics-disp{cursor:text;display:flex;flex-direction:column;gap:7px}
+.ov-lyrics-disp:hover{outline:1px dashed var(--line-mid);outline-offset:4px;border-radius:6px}
+.ov-ln{position:relative}
+.ov-ln-chords{position:relative;height:19px;margin-bottom:1px}
+.ov-ln-tick{position:absolute;bottom:0;width:1px;height:5px;background:var(--line-mid);opacity:.7}
+.ov-ln-tick.bar{height:9px;background:var(--line-strong);opacity:.9}
+.ov-ln-chord{
+  position:absolute;bottom:4px;transform:translateX(-1px);
+  font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--accent);
+  white-space:nowrap;background:var(--bg-0);padding:0 3px;z-index:2;line-height:1.1;
+}
+.ov-ln-chord .bt{font-size:7px;color:var(--accent-dim);margin-left:1px;font-family:'JetBrains Mono',monospace;vertical-align:super}
+.ov-ln-text{
+  font-family:'Fraunces',serif;font-size:16px;font-weight:300;font-style:italic;
+  line-height:1.5;color:var(--ink);min-height:22px;white-space:pre-wrap;
+}
+.ov-ln-text .empty{color:var(--ink-faint);font-size:13px}
+
+@media(max-width:640px){
+  .ov-ln-chord{font-size:12px}
+  .ov-ln-text{font-size:15px}
+}
+
+
+/* ═══════ READING MODE · lead sheet ═══════ */
+.rd-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.rd-sheet{
+  background:var(--bg-0);border:1px solid var(--line);border-radius:12px;
+  padding:20px 22px;max-height:calc(100vh - 200px);overflow-y:auto;
+}
+.rd-meta{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.rd-meta h3{font-family:'Fraunces',serif;font-weight:300;font-size:20px;color:var(--ink)}
+.rd-meta .rd-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);margin-top:4px}
+.rd-block{margin-bottom:18px}
+.rd-block.muted{opacity:.4}
+.rd-sec{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rd-sec-tag{color:#fff;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:4px}
+.rd-sec-meta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-faint)}
+.rd-line{position:relative;margin-bottom:5px}
+.rd-chordrow{position:relative;height:16px;font-family:'JetBrains Mono',monospace}
+.rd-chord{
+  position:absolute;bottom:0;font-family:'Fraunces',serif;font-weight:600;font-size:13px;
+  color:var(--accent);white-space:nowrap;transform:translateX(-1px);
+}
+.rd-text{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.4;color:var(--ink);white-space:pre-wrap}
+
+.rd-editor{
+  background:var(--bg-0);border:1px solid var(--line);border-radius:12px;
+  display:flex;flex-direction:column;overflow:hidden;position:sticky;top:0;
+}
+.rd-ed-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg-1);
+  font-size:11px;color:var(--ink-dim);
+}
+.rd-ed-head code{font-family:'JetBrains Mono',monospace;background:var(--bg-2);padding:1px 4px;border-radius:3px;font-size:10px}
+.rd-ed-actions{display:flex;gap:6px;flex-shrink:0}
+.rd-ed-actions button{
+  background:var(--bg-2);border:1px solid var(--line-mid);color:var(--ink-dim);
+  font-family:'Inter',sans-serif;font-size:11px;font-weight:500;padding:5px 12px;border-radius:7px;cursor:pointer;transition:all .1s;
+}
+.rd-ed-actions button:hover{background:var(--bg-3);color:var(--ink)}
+.rd-ed-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.rd-ed-actions button.primary:hover{background:var(--accent-dim)}
+#rdSource{
+  flex:1;min-height:360px;max-height:calc(100vh - 260px);width:100%;resize:vertical;
+  border:none;outline:none;padding:14px 16px;background:var(--bg-0);color:var(--ink);
+  font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;
+}
+.rd-ed-hint{padding:8px 14px;border-top:1px solid var(--line);background:var(--bg-1);font-size:10px;color:var(--ink-faint);line-height:1.5}
+.rd-ed-hint code{font-family:'JetBrains Mono',monospace;background:var(--bg-2);padding:1px 4px;border-radius:3px}
+
+@media(max-width:860px){
+  .rd-wrap{grid-template-columns:1fr}
+  .rd-editor{position:static}
+  #rdSource{max-height:none;min-height:300px}
+  .rd-sheet{max-height:none}
+}
+
+
+/* ═══════ CHORD LINES (rhythm blocks: organise chords by line) ═══════ */
+.chord-lines-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 10px}
+.chord-lines-toolbar .cl-count{font-size:10px;color:var(--ink-dim)}
+.chord-lines-toolbar .cl-count b{color:var(--ink)}
+.cl-btn{
+  background:var(--bg-1);border:1px solid var(--line-mid);color:var(--ink-dim);
+  font-family:'Inter',sans-serif;font-size:10px;font-weight:500;padding:4px 10px;border-radius:7px;cursor:pointer;transition:all .1s;
+}
+.cl-btn:hover{background:var(--accent-bg);color:var(--accent);border-color:var(--accent-dim)}
+.cl-hint{font-size:9px;color:var(--ink-faint)}
+
+.chord-line-stack{display:flex;flex-direction:column;gap:6px}
+
+/* A row = proportional chord lane + inline actions. No dashed separators. */
+.chord-line{display:flex;align-items:stretch;gap:6px;border:none;background:transparent;padding:0;position:relative}
+.chord-line .chord-line-head,.chord-line .pattern-bar-ruler,.chord-line .pattern-timeline-wrap{display:none}
+
+/* Proportional lane: width inline as %; show 2–3 cards, rest scrolls (item 4/5). */
+.chord-line .chord-slots{display:flex;align-items:stretch;gap:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:visible;min-width:120px;padding-bottom:2px}
+
+/* CARD: proportional to beats (flex-grow inline) but legible & roomy. */
+.chord-line .chord-slot{
+  position:relative;flex-shrink:0;min-width:clamp(120px,30vw,220px);padding:8px 10px 7px;
+  border:1px solid var(--line-mid);border-radius:8px;background:var(--bg-0);
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  transition:box-shadow .12s,border-color .12s;
+}
+.chord-line .chord-slot:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);border-color:var(--line-strong)}
+.chord-line .chord-name{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--ink);outline:none;min-width:16px;text-align:center;white-space:nowrap}
+.chord-line .chord-beats{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink-faint)}
+.chord-line .chord-grip{top:2px;left:2px}
+
+/* Per-card delete. */
+.chord-card-del{
+  position:absolute;top:2px;right:2px;z-index:26;width:15px;height:15px;border-radius:4px;
+  border:1px solid var(--line-mid);background:var(--bg-0);color:var(--ink-faint);font-size:11px;line-height:1;
+  cursor:pointer;display:grid;place-items:center;padding:0;opacity:0;transition:all .1s;
+}
+.chord-slot:hover .chord-card-del{opacity:1}
+.chord-card-del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* Resize on right edge, lower half (clear of the delete button). */
+.chord-line .chord-resize{position:absolute;right:0;bottom:0;top:48%;width:6px;cursor:col-resize;border-radius:0 8px 8px 0}
+.chord-line .chord-resize:hover{background:var(--accent-glow)}
+
+/* DYNAMIC INSERTION GAP between/after cards. */
+.chord-gap{
+  flex-shrink:0;align-self:stretch;width:16px;margin:0 -2px;padding:0;border:none;background:transparent;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;z-index:6;
+}
+.chord-gap .chord-gap-bar{width:2px;height:55%;border-radius:2px;background:transparent;transition:background .1s,width .1s,height .1s}
+.chord-gap:hover .chord-gap-bar{background:var(--accent);width:3px;height:82%}
+.chord-gap .chord-gap-plus{position:absolute;font-size:13px;font-weight:700;color:var(--accent);opacity:0;transition:opacity .1s;line-height:1}
+.chord-gap.end{width:32px;flex-shrink:0}
+.chord-gap.end:hover .chord-gap-plus{opacity:1}
+.chord-gap.end:hover .chord-gap-bar{background:transparent}
+
+/* Row actions (only delete-row now; +/+fila removed). */
+.chord-line-actions{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+.chord-line .cl-line-del{position:static;margin-left:0;width:24px;height:auto;align-self:stretch}
+
+/* Hide the "1 compás/línea" toolbar button (prior request). */
+.cl-btn[onclick*="gcAutoBars"]{display:none}
+/* item 1: hide "Unir en 1" (gcClear) and the per-pattern "N beats total". */
+.cl-btn[onclick*="gcClear"]{display:none}
+.pattern-card .chord-fill{display:none}
+
+/* line-break toggle on each chord slot */
+.chord-break-btn{
+  position:absolute;top:2px;right:2px;z-index:25;
+  width:16px;height:16px;border-radius:4px;border:1px solid var(--line-mid);
+  background:var(--bg-0);color:var(--ink-faint);font-size:10px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;padding:0;transition:all .1s;opacity:.5;
+}
+.chord-slot:hover .chord-break-btn{opacity:1}
+.chord-break-btn:hover{background:var(--bg-2);color:var(--ink)}
+.chord-break-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);opacity:1}
+.chord-slot{padding-top:6px}
+
+
+/* ═══════ PATTERN LINES (drag-reorder + grip) ═══════ */
+.chord-grip{
+  position:absolute;top:2px;left:2px;z-index:25;
+  width:16px;height:16px;border-radius:4px;border:1px solid var(--line-mid);
+  background:var(--bg-0);color:var(--ink-faint);font-size:9px;line-height:1;cursor:grab;
+  display:grid;place-items:center;padding:0;opacity:.45;transition:all .1s;
+}
+.chord-slot:hover .chord-grip{opacity:1}
+.chord-grip:hover{background:var(--bg-2);color:var(--ink)}
+.chord-grip:active{cursor:grabbing}
+.chord-slot.drag-over{outline:2px dashed var(--accent);outline-offset:1px}
+.chord-slot.dragging{opacity:.4}
+.pattern-slots-inner .chord-slot{padding-top:8px}
+.chord-slots.cards .chord-slot{padding-top:6px}
+
+
+/* ═══════ N-BAR LINE CONTROLS ═══════ */
+.cl-line-del{
+  margin-left:auto;width:18px;height:18px;border-radius:5px;border:1px solid var(--line-mid);
+  background:var(--bg-0);color:var(--ink-faint);font-size:12px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;padding:0;transition:all .1s;
+}
+.cl-line-del:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.cl-addline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding:7px 8px;border:1px dashed var(--line-mid);border-radius:8px;background:var(--bg-1)}
+.cl-addline-lbl{font-size:10px;color:var(--ink-dim)}
+.cl-bars-input{
+  width:48px;background:var(--bg-0);border:1px solid var(--line-mid);color:var(--ink);
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 6px;border-radius:6px;outline:none;text-align:center;
+}
+.cl-bars-input:focus{border-color:var(--accent)}
+
+/* ═══════ READING MODE · draggable chords + inline lyric edit ═══════ */
+/* Position chords on the text's MONOSPACE ch metric so they land on the
+   right syllable; show the name in serif via an inner span. */
+.rd-chord{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1;cursor:grab;user-select:none}
+.rd-chord .rd-chord-nm{font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--accent)}
+.rd-chord:hover .rd-chord-nm{text-decoration:underline}
+.rd-chord:active{cursor:grabbing}
+.rd-chord.dragging{opacity:.4}
+.rd-chordrow{cursor:default}
+
+/* Editable lyric line. */
+.rd-text[contenteditable]{outline:none;cursor:text;min-height:18px}
+.rd-text[contenteditable]:hover{box-shadow:inset 0 0 0 1px var(--line)}
+.rd-text[contenteditable]:focus{background:var(--bg-1);border-radius:4px;box-shadow:inset 0 0 0 1px var(--line-mid)}
+.rd-line.rd-drop .rd-text{background:var(--accent-glow);border-radius:4px;box-shadow:inset 0 0 0 1px var(--accent)}
+.rd-line.rd-drop .rd-chordrow{outline:1px dashed var(--accent);border-radius:3px}
+/* ═══════ READING MODE · floating drag preview ═══════ */
+.rd-drag-preview{
+  position:fixed;z-index:9999;pointer-events:none;
+  font-family:'Fraunces',serif;font-weight:600;font-size:14px;line-height:1;
+  color:#fff;background:var(--accent);
+  padding:5px 9px;border-radius:6px;
+  box-shadow:0 4px 14px rgba(79,110,247,.35),0 1px 3px rgba(0,0,0,.15);
+  transform:translateX(-1px);transition:top .04s linear,left .04s linear;
+  white-space:nowrap;user-select:none;
+}
+.rd-drag-preview.snapped{
+  background:var(--accent);
+  box-shadow:0 0 0 2px var(--accent-glow),0 4px 14px rgba(79,110,247,.45);
+}
+/* While dragging, the editable lyric must not show a text caret. */
+.rd-line.rd-drop .rd-text{caret-color:transparent}
