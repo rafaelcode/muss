@@ -20,9 +20,18 @@ function toggleOverviewChannel(id){
 }
 function ovColTemplate(channels){
   const cols=channels.map(c=>{
-    if(c.type==='lyrics')return'minmax(300px,1.9fr)';
-    if(c.type==='lead'||c.type==='bass')return'minmax(190px,1.1fr)';
-    if(c.type==='rhythm')return'minmax(170px,1.1fr)';
+    if(c.type==='lyrics'){
+      // Compute the pixel width of the longest lyric line across all blocks.
+      const ly=STATE.song.channels.find(x=>x.type==='lyrics');
+      let maxLen=20,_maxLine='';
+      if(ly)STATE.song.blocks.forEach(b=>{(b.content[ly.id]?.text||'').split('\n').forEach(l=>{if(l.length>maxLen){maxLen=l.length;_maxLine=l}})});
+      // Measure using a hidden span with the same font as .ov-ln-text (Fraunces 16px italic).
+      let px=maxLen*9.5;
+      try{const sp=document.createElement('span');sp.style.cssText='position:absolute;visibility:hidden;white-space:nowrap;font-family:Fraunces,serif;font-size:16px;font-weight:300;font-style:italic';sp.textContent=_maxLine||'M'.repeat(maxLen);document.body.appendChild(sp);const _m=sp.offsetWidth;sp.remove();if(_m>10)px=_m}catch(_){}
+      return Math.max(200,Math.ceil(px)+32)+'px';
+    }
+    if(c.type==='lead'||c.type==='bass')return'minmax(160px,1fr)';
+    if(c.type==='rhythm')return'minmax(140px,1fr)';
     return'minmax(150px,1fr)';
   });
   return`108px ${cols.join(' ')} 32px`;
@@ -496,5 +505,178 @@ function init(){
   libRender();
   showScreen('library');   // always start on the dashboard
 }
+/* ═══════════════════════════════════════════════════════════
+   RESUMEN — flat-card dashboard of the song
+   Aggregates everything we know so far: structure, channels,
+   chords, notes, patterns, riffs, lyrics, key estimate.
+   ═══════════════════════════════════════════════════════════ */
+function renderSummary(){
+  const s=STATE.song;
 
+  // ── Header ──
+  $('#editorHead').innerHTML=`<div class="editor-title"><span class="editor-title-tag">Resumen</span>
+    <span style="font-family:'Fraunces',serif;font-size:18px;font-style:italic;color:var(--ink-dim)">${escapeHTML(s.title||'Sin título')}</span></div>`;
 
+  // ── Aggregates ──
+  const totalBars=s.blocks.reduce((a,b)=>a+(b.bars||0),0);
+  const totalBeats=totalBars*sigBeats();
+  const durSec=totalBeats*60/(s.bpm||120);
+  const dur=`${Math.floor(durSec/60)}:${String(Math.floor(durSec%60)).padStart(2,'0')}`;
+
+  // Section counts + ordered structure timeline
+  const secCount={};
+  s.blocks.forEach(b=>{if(b.section)secCount[b.section]=(secCount[b.section]||0)+1});
+
+  // Channels grouped by type
+  const chByType={};
+  s.channels.forEach(ch=>{(chByType[ch.type]=chByType[ch.type]||[]).push(ch)});
+
+  // Chord frequency (from rhythm channels + chordpro)
+  const chordCount={};
+  const rhythms=s.channels.filter(c=>c.type==='rhythm');
+  s.blocks.forEach(b=>{
+    rhythms.forEach(rh=>{
+      const cs=getChords(b,rh.id);
+      cs.forEach(c=>{const n=(c.name||'').trim();if(n)chordCount[n]=(chordCount[n]||0)+1});
+    });
+    if(b.chordpro){
+      const re=/\[([^\]]+)\]/g;let m;
+      while((m=re.exec(b.chordpro))){const n=m[1].trim();if(n&&!chordCount[n])chordCount[n]=0}
+    }
+  });
+  const chordsList=Object.entries(chordCount).sort((a,b)=>b[1]-a[1]);
+
+  // Root notes (chromatic circle)
+  const notesUsed=new Set();
+  chordsList.forEach(([n])=>{const m=n.match(/^([A-G])([#b])?/);if(m){let nt=m[1]+(m[2]||'');if(m[2]==='b'){const map={Db:'C#',Eb:'D#',Gb:'F#',Ab:'G#',Bb:'A#'};nt=map[nt]||nt}notesUsed.add(nt)}});
+
+  // Key estimate: most common chord root (with minor suffix)
+  let keyEstimate='—';
+  if(chordsList.length){
+    const top=chordsList[0][0];
+    const m=top.match(/^([A-G][#b]?)(m(?!aj))?/);
+    if(m)keyEstimate=m[1]+(m[2]?' menor':' mayor');
+  }
+
+  // Lyrics aggregated
+  const lyCh=s.channels.find(c=>c.type==='lyrics');
+  const lyricsText=lyCh?s.blocks.map(b=>(b.content[lyCh.id]?.text||'').trim()).filter(Boolean).join('\n\n'):'';
+  const lyricsLines=lyricsText.split('\n').filter(l=>l.trim()).length;
+  const lyricsWords=lyricsText.split(/\s+/).filter(Boolean).length;
+
+  // Library
+  const patternsCount=(s.progressions||[]).length;
+  const riffsCount=(s.library?.riffs||[]).length;
+
+  // Per-channel pattern usage (rhythm → progressions applied)
+  const chPatterns={};
+  rhythms.forEach(rh=>{
+    const applied=new Set();
+    s.blocks.forEach(b=>{const ap=b.content[rh.id]?.appliedPatterns||[];ap.forEach(id=>applied.add(id))});
+    chPatterns[rh.id]=applied.size;
+  });
+
+  // ── Render ──
+  const cv=$('#canvas');cv.className='canvas summary-canvas';cv.style.cssText='';
+  const CHROMATIC=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+  cv.innerHTML=`
+    <!-- Header / dashboard stats -->
+    <div class="sm-card sm-header">
+      <div class="sm-h-title">
+        <div class="sm-h-name">${escapeHTML(s.title||'Sin título')}</div>
+        <div class="sm-h-artist">${escapeHTML(s.artist||'Sin artista')}</div>
+      </div>
+      <div class="sm-h-meta">
+        <div class="sm-stat"><div class="sm-stat-v">${s.bpm||'—'}</div><div class="sm-stat-l">BPM</div></div>
+        <div class="sm-stat"><div class="sm-stat-v">${s.signature||'—'}</div><div class="sm-stat-l">Compás</div></div>
+        <div class="sm-stat"><div class="sm-stat-v">${dur}</div><div class="sm-stat-l">Duración</div></div>
+        <div class="sm-stat"><div class="sm-stat-v">${totalBars}</div><div class="sm-stat-l">Bars</div></div>
+        <div class="sm-stat"><div class="sm-stat-v">${keyEstimate}</div><div class="sm-stat-l">Tonalidad</div></div>
+        <div class="sm-stat"><div class="sm-stat-v">${s.blocks.length}</div><div class="sm-stat-l">Bloques</div></div>
+      </div>
+    </div>
+
+    <!-- 2-column grid: lyrics (left) + analysis cards (right) -->
+    <div class="sm-grid">
+      <div class="sm-card sm-lyrics">
+        <div class="sm-card-head"><span class="sm-card-title">Letra completa</span>
+          <span class="sm-card-sub">${lyricsLines} líneas · ${lyricsWords} palabras</span></div>
+        <div class="sm-card-body">
+          <pre class="sm-lyrics-text">${lyricsText?escapeHTML(lyricsText):'<em style="color:var(--ink-faint)">Sin letra cargada</em>'}</pre>
+        </div>
+      </div>
+
+      <div class="sm-col-right">
+
+        <!-- Structure timeline -->
+        <div class="sm-card">
+          <div class="sm-card-head"><span class="sm-card-title">Estructura</span>
+            <span class="sm-card-sub">${s.blocks.length} bloques · ${totalBars} bars</span></div>
+          <div class="sm-card-body">
+            <div class="sm-struct">${s.blocks.map((b,i)=>{
+              const col=SECTION_COLORS[b.section]||'#999';
+              return `<div class="sm-struct-block" style="background:${col};flex-grow:${b.bars||1}" title="#${i+1} ${b.section||''} · ${b.bars}b">
+                <span class="sm-struct-name">${escapeHTML(b.section||'—')}</span>
+                <span class="sm-struct-bars">${b.bars}b</span></div>`;
+            }).join('')}</div>
+            <div class="sm-section-counts">${Object.entries(secCount).map(([sec,n])=>{
+              const col=SECTION_COLORS[sec]||'#999';
+              return `<span class="sm-pill" style="background:${col}22;color:${col};border-color:${col}55">${sec} <b>×${n}</b></span>`;
+            }).join('')}</div>
+          </div>
+        </div>
+
+        <!-- Chords used -->
+        <div class="sm-card">
+          <div class="sm-card-head"><span class="sm-card-title">Acordes</span>
+            <span class="sm-card-sub">${chordsList.length} únicos · ${Object.values(chordCount).reduce((a,b)=>a+b,0)} totales</span></div>
+          <div class="sm-card-body">
+            ${chordsList.length?`<div class="sm-chords">${chordsList.map(([n,c])=>`<span class="sm-chord-pill">${escapeHTML(n)}${c>0?`<small>×${c}</small>`:''}</span>`).join('')}</div>`:`<div class="sm-empty">Sin acordes registrados</div>`}
+          </div>
+        </div>
+
+        <!-- Note circle -->
+        <div class="sm-card">
+          <div class="sm-card-head"><span class="sm-card-title">Círculo de notas</span>
+            <span class="sm-card-sub">${notesUsed.size}/12 notas</span></div>
+          <div class="sm-card-body">
+            <div class="sm-notes-circle">${CHROMATIC.map(n=>`<span class="sm-note${notesUsed.has(n)?' on':''}">${n}</span>`).join('')}</div>
+          </div>
+        </div>
+
+        <!-- Channels -->
+        <div class="sm-card">
+          <div class="sm-card-head"><span class="sm-card-title">Canales</span>
+            <span class="sm-card-sub">${s.channels.length} total</span></div>
+          <div class="sm-card-body">
+            ${s.channels.length?`<div class="sm-channels">${s.channels.map(ch=>{
+              const info=CH_TYPE_INFO[ch.type]||{letter:'?',label:ch.type};
+              const extra=ch.type==='rhythm'?` · ${chPatterns[ch.id]||0} patrones`:
+                          (ch.type==='lead'||ch.type==='bass')?` · ${riffsCount} riffs`:'';
+              return `<div class="sm-channel">
+                <div class="sm-ch-icon" style="background:${ch.color}">${info.letter}</div>
+                <div class="sm-ch-info">
+                  <div class="sm-ch-name">${escapeHTML(ch.name)}</div>
+                  <div class="sm-ch-type">${info.label}${extra}</div>
+                </div>
+              </div>`;
+            }).join('')}</div>`:`<div class="sm-empty">Sin canales</div>`}
+          </div>
+        </div>
+
+        <!-- Library / stats -->
+        <div class="sm-card">
+          <div class="sm-card-head"><span class="sm-card-title">Biblioteca</span></div>
+          <div class="sm-card-body">
+            <div class="sm-lib-row"><span class="sm-lib-label">Patrones de acordes</span><span class="sm-lib-val">${patternsCount}</span></div>
+            <div class="sm-lib-row"><span class="sm-lib-label">Riffs guardados</span><span class="sm-lib-val">${riffsCount}</span></div>
+            <div class="sm-lib-row"><span class="sm-lib-label">Beats totales</span><span class="sm-lib-val">${totalBeats}</span></div>
+            ${s.link?`<div class="sm-lib-row"><span class="sm-lib-label">Referencia</span><a class="sm-lib-link" href="${escapeHTML(s.link)}" target="_blank" rel="noopener">Abrir ↗</a></div>`:''}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}

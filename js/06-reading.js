@@ -23,7 +23,7 @@ function blockToChordProLines(block,fresh){
   if(!chords.length) return lines.join('\n');
   const per=Math.ceil(chords.length/lines.length);
   let ci=0;
-  const out=lines.map(ln=>{const grp=chords.slice(ci,ci+per);ci+=per;return grp.map(c=>`[${c.name}]`).join('')+ln});
+  const out=lines.map(ln=>{const grp=chords.slice(ci,ci+per);ci+=per;if(!ln.trim()){let o='';grp.forEach((c,j)=>{if(j)o+='   ';o+=`[${c.name}]`});return o}return grp.map(c=>`[${c.name}]`).join('')+ln});
   if(ci<chords.length)out[out.length-1]+=chords.slice(ci).map(c=>`[${c.name}]`).join('');
   return out.join('\n');
 }
@@ -106,6 +106,9 @@ function rdParseLine(line){
   return {stripped,chords};
 }
 function rdBuildLine(stripped,chords){
+  // Pad stripped with spaces if chords sit beyond current text length (chord-only lines / tabs).
+  const maxPos=chords.reduce((m,c)=>Math.max(m,c.pos),0);
+  if(maxPos>stripped.length) stripped=stripped.padEnd(maxPos,' ');
   const sorted=[...chords].sort((a,b)=>a.pos-b.pos);
   let out='',last=0;
   for(const c of sorted){const p=Math.max(0,Math.min(stripped.length,c.pos));out+=stripped.slice(last,p)+`[${c.name}]`;last=p}
@@ -127,7 +130,7 @@ function rdMoveChord(srcBid,srcLi,ci,dstBid,dstLi,newPos){
   const [moved]=src.chords.splice(ci,1);
   lines[srcLi]=rdBuildLine(src.stripped,src.chords);
   const dst=rdParseLine(lines[dstLi]);
-  moved.pos=Math.max(0,Math.min(dst.stripped.length,newPos));
+  moved.pos=Math.max(0,newPos);    // don't clamp to text length — rdBuildLine pads with spaces
   dst.chords.push(moved);
   lines[dstLi]=rdBuildLine(dst.stripped,dst.chords);
   b.chordpro=lines.join('\n');                     // persist position with the lyric
@@ -147,13 +150,34 @@ function rdEditLine(bid,li,newText){
   renderReading();
 }
 
+/* Split a line at char position (Enter key): chords before stay, chords after go to new line. */
+function rdSplitLineAt(bid,li,charPos){
+  const b=rdBlockById(bid);if(!b)return;
+  const lines=rdGetLines(b);if(li<0||li>=lines.length)return;
+  const {stripped,chords}=rdParseLine(lines[li]);
+  const pos=Math.max(0,Math.min(stripped.length,charPos));
+  const before=chords.filter(c=>c.pos<pos);
+  const after=chords.filter(c=>c.pos>=pos);
+  after.forEach(c=>{c.pos=Math.max(0,c.pos-pos)});
+  lines[li]=rdBuildLine(stripped.slice(0,pos),before);
+  lines.splice(li+1,0,rdBuildLine(stripped.slice(pos),after));
+  b.chordpro=lines.join('\n');
+  renderReading();
+}
+
 /* ── Lead-sheet preview (chords draggable + lyric editable inline) ── */
 function rdLineHTML(line,bid,li){
   const {stripped,chords}=rdParseLine(line);
   const len=stripped.length;
   const chordRow=chords.map((c,ci)=>`<span class="rd-chord" draggable="true" data-bid="${bid}" data-li="${li}" data-ci="${ci}" style="left:${c.pos}ch" title="Arrastrá para ubicar sobre la sílaba"><span class="rd-chord-nm">${escapeHTML(c.name)}</span></span>`).join('');
   const txt=len?escapeHTML(stripped):'&nbsp;';
-  return`<div class="rd-line" data-bid="${bid}" data-li="${li}" data-len="${len}"><div class="rd-chordrow">${chordRow}</div><div class="rd-text" contenteditable="true" spellcheck="false" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="rdEditLine('${bid}',${li},this.textContent)">${txt}</div></div>`;
+  const noLy=!stripped.trim();
+  if(noLy){
+    // Card-style flex row for chord-only lines (no text shown)
+    const cardRow=chords.map((c,ci)=>`<span class="rd-chord rd-card" draggable="true" data-bid="${bid}" data-li="${li}" data-ci="${ci}" title="Arrastrá para mover entre filas"><span class="rd-chord-nm">${escapeHTML(c.name)}</span></span>`).join('');
+    return`<div class="rd-line no-lyrics" data-bid="${bid}" data-li="${li}" data-len="${len}"><div class="rd-chordrow cards">${cardRow}</div></div>`;
+  }
+  return`<div class="rd-line" data-bid="${bid}" data-li="${li}" data-len="${len}"><div class="rd-chordrow">${chordRow}</div><div class="rd-text" contenteditable="true" spellcheck="false" onkeydown="if(event.key==='Enter'){event.preventDefault();const s=window.getSelection();const p=s.rangeCount?s.getRangeAt(0).startOffset:0;rdSplitLineAt('${bid}',${li},p)}" onblur="rdEditLine('${bid}',${li},this.textContent)">${txt}</div></div>`;
 }
 function renderLeadSheet(){
   const s=STATE.song,spb=secPerBeat();let t=0;
@@ -179,15 +203,18 @@ let _rdDrag=null;
 let _rdPreview=null;
 let _rdGlobalBound=false;
 
-function rdRemovePreview(){if(_rdPreview&&_rdPreview.parentNode)_rdPreview.parentNode.removeChild(_rdPreview);_rdPreview=null}
+function rdRemovePreview(){if(_rdPreview&&_rdPreview.parentNode)_rdPreview.parentNode.removeChild(_rdPreview);_rdPreview=null;document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove())}
 
 function rdCharIdx(line,clientX){
-  const txt=line.querySelector('.rd-text');if(!txt)return 0;
-  const rect=txt.getBoundingClientRect();
+  const txt=line.querySelector('.rd-text');
+  const crow=line.querySelector('.rd-chordrow');
+  // For chord-only lines (len=0 / text collapsed), use the chordrow or line as reference.
+  const ref=txt&&txt.getBoundingClientRect().width>2?txt:(crow||line);
+  const rect=ref.getBoundingClientRect();
   const len=parseInt(line.dataset.len)||0;
-  const cw=len>0?rect.width/len:8;
+  const cw=len>0?rect.width/len:8;         // 8px ≈ 1ch fallback for empty lines
   let idx=Math.round((clientX-rect.left)/cw);
-  return {idx:Math.max(0,Math.min(len,idx)),rect,cw,len};
+  return {idx:Math.max(0,idx),rect,cw,len};  // no upper clamp — rdBuildLine pads
 }
 
 function rdGlobalDragOver(e){
@@ -206,7 +233,17 @@ function rdGlobalDragOver(e){
       _rdPreview.style.left=(r.left+idx*cw)+'px';
       _rdPreview.style.top=(r.top-20)+'px';
       _rdPreview.classList.add('snapped');
+      // Show drop cursor marker at the exact character position
+      document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove());
+      const cr=document.createElement('div');cr.className='rd-drop-cursor';
+      const lr=line.getBoundingClientRect();
+      cr.style.left=(r.left+idx*cw-lr.left)+'px';
+      line.appendChild(cr);
+    } else {
+      document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove());
     }
+  } else {
+    document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove());
   }
 }
 
@@ -260,17 +297,25 @@ function bindReadingDnD(){
   });
 }
 
+/* Toggle chord visibility in the lead sheet. */
+function rdToggleChords(){
+  STATE.ui.rdShowChords=!(STATE.ui.rdShowChords!==false);
+  renderReading();
+}
+
 function renderReading(){
+  const _sc=STATE.ui.rdShowChords!==false;
   $('#editorHead').innerHTML=
     `<div class="editor-title"><span class="editor-title-tag" style="background:var(--accent-bg);color:var(--accent)">Lectura</span><h2>${escapeHTML(STATE.song.title)||'Untitled'}</h2></div>`+
     `<div style="display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:var(--ink-faint)">${STATE.song.bpm} bpm · ${escapeHTML(STATE.song.signature)} · ${fmtTime(totalDur())}</span></div>`;
   const cv=$('#canvas');cv.className='canvas';cv.style.cssText='';
   cv.innerHTML=
     `<div class="rd-wrap">
-      <div class="rd-sheet">${renderLeadSheet()}</div>
+      <div class="rd-sheet${_sc?'':' rd-no-chords'}">${renderLeadSheet()}</div>
       <div class="rd-editor">
         <div class="rd-ed-head"><span><b>Editor</b> — arrastrá los <code>[acordes]</code> sobre la sílaba · clic en la letra para editar (los tiempos no cambian)</span>
           <div class="rd-ed-actions">
+            <button class="${_sc?'rd-chord-toggle on':'rd-chord-toggle'}" onclick="rdToggleChords()" title="Mostrar/ocultar acordes">♫ Acordes</button>
             <button onclick="regenChordPro()" title="Reconstruir desde los canales">↻ Regenerar</button>
             <button class="primary" onclick="saveChordProFromEditor()">Guardar</button>
           </div>

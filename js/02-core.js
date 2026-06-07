@@ -235,28 +235,22 @@ function renderPatternCatalog(ch,cv){
     cv.appendChild(wrap);return;
   }
   const grid=document.createElement('div');grid.className='pattern-grid';const bpb=sigBeats();
-  STATE.song.progressions.forEach(prog=>{
+  STATE.song.progressions.forEach((prog,_pi)=>{
     const ref={type:'prog',progId:prog.id};
     const chords=progChords(prog);
     const totalBeats=chords.reduce((s,c)=>s+c.beats,0);
     const numBars=Math.max(1,Math.round(totalBeats/bpb));
     const lines=chordsToLines(chords);
     const stack=renderChordLineStack(ref,chords);
-    const card=document.createElement('div');card.className='pattern-card';
+    const card=document.createElement('div');card.className='pattern-card';card.dataset.progIdx=_pi;
     card.innerHTML=`
-      <div class="pattern-card-head">
+      <div class="pattern-card-head"><button class="pattern-card-grip" title="Arrastrar para reordenar">⠿</button>
         <input class="pattern-card-name" value="${escapeHTML(prog.name)}" spellcheck="false" onblur="renameProgById('${prog.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()" title="Click to rename">
         <span style="font-size:9px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;white-space:nowrap">${chords.length} chord${chords.length!==1?'s':''} · ${totalBeats} beats · ${numBars} bar${numBars!==1?'s':''} · ${lines.length} línea${lines.length!==1?'s':''}</span>
         <button class="pattern-card-del" onclick="deleteProgression('${prog.id}')" title="Delete">×</button>
       </div>
-      <div class="pattern-card-body">
-        <div class="chord-lines-toolbar">
-          <button class="cl-btn" onclick="gcAutoBars('${refTok(ref)}')" title="Una línea por compás">⊞ 1 compás/línea</button>
-          <button class="cl-btn" onclick="gcClear('${refTok(ref)}')" title="Unir todo en una línea">⥶ Unir en 1</button>
-          <span class="cl-hint">↵ corta línea · ⠿ arrastrá para mover de línea</span>
-        </div>
-        ${stack}
-        <div class="chord-fill under" id="pfill_${prog.id}" style="margin:6px 0 10px">${totalBeats} beats total</div>
+      <div class="pattern-card-body">       
+        ${stack}        
         <div class="pattern-card-actions">
           <button class="pattern-apply-btn" onclick="applyPatternToBlock('${ch.id}','${prog.id}')">Apply to block…</button>
           <button class="pattern-dup-btn" onclick="duplicatePattern('${prog.id}')">⧉ Duplicate &amp; edit</button>
@@ -265,8 +259,30 @@ function renderPatternCatalog(ch,cv){
     grid.appendChild(card);
   });
   wrap.appendChild(grid);cv.appendChild(wrap);
-  requestAnimationFrame(()=>{document.querySelectorAll('.chord-slots[data-prog]').forEach(bindChordResizeGeneric);bindChordDnDAll()});
+  requestAnimationFrame(()=>{document.querySelectorAll('.chord-slots[data-prog]').forEach(bindChordResizeGeneric);bindChordDnDAll();bindPatternCardDnD()});
 }
+/* Reorder patterns via drag-and-drop on the pattern cards. */
+function moveProgression(from,to){
+  if(from===to||from<0||to<0)return;
+  const arr=STATE.song.progressions;
+  if(from>=arr.length||to>=arr.length)return;
+  const [m]=arr.splice(from,1);
+  arr.splice(to,0,m);
+  renderEditor();
+}
+let _patDrag=null;
+function bindPatternCardDnD(){
+  document.querySelectorAll('.pattern-card').forEach(card=>{
+    const grip=card.querySelector('.pattern-card-grip');if(!grip)return;
+    grip.addEventListener('mousedown',()=>card.setAttribute('draggable','true'));
+    card.addEventListener('dragstart',e=>{_patDrag=parseInt(card.dataset.progIdx);e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','')}catch(_){}card.classList.add('dragging')});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');card.setAttribute('draggable','false');_patDrag=null});
+    card.addEventListener('dragover',e=>{if(_patDrag!=null){e.preventDefault();card.classList.add('drag-over')}});
+    card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
+    card.addEventListener('drop',e=>{e.preventDefault();card.classList.remove('drag-over');if(_patDrag!=null){const to=parseInt(card.dataset.progIdx);moveProgression(_patDrag,to);_patDrag=null}});
+  });
+}
+
 function renameProgById(progId,name){ensureProgs();const p=STATE.song.progressions.find(x=>x.id===progId);if(p&&name.trim())p.name=name.trim()}
 
 /* Edit chord name in pattern catalog */

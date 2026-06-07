@@ -19,25 +19,19 @@ function renderChordEditor(ch,block,data){
   // Pattern bar (save / apply reusable progressions)
   const applied=(data.appliedPatterns||[]).filter(id=>STATE.song.progressions.find(p=>p.id===id));
   const available=STATE.song.progressions.filter(p=>!applied.includes(p.id));
-  let patternBar=`<div class="chord-patterns"><button class="cp-save" onclick="saveProgression('${ch.id}','${block.id}')" title="Save these chords as a reusable pattern">★ Save as pattern</button>`;
+  let patternBar=`<div class="chord-patterns"><button class="cp-save" onclick="saveProgression('${ch.id}','${block.id}')" title="Save these chords as a reusable pattern">★ Save as pattern</button><button class="cp-catalog" onclick="ccOpenPicker('${block.id}','${ch.id}')" title="Pick from chord catalog">📖 Catálogo</button>`;
   if(applied.length){applied.forEach(pid=>{const p=STATE.song.progressions.find(x=>x.id===pid);if(!p)return;patternBar+=`<span class="cp-chip"><span class="cp-chip-name" onclick="applyProgression('${ch.id}','${block.id}','${pid}')" title="Re-apply">${escapeHTML(p.name)}</span><span class="cp-chip-edit" onclick="renameProgression('${pid}')" title="Rename pattern">✎</span><span class="cp-chip-del" onclick="removePatternFromBlock('${ch.id}','${block.id}','${pid}')" title="Remove from block">×</span></span>`})}
   if(applied.length<2&&available.length){patternBar+=`<select class="cp-select" onchange="if(this.value){applyProgression('${ch.id}','${block.id}',this.value);this.value=''}"><option value="">+ Apply pattern…</option>`;available.forEach(p=>{const preview=p.chords.map(normalizeChord).map(c=>c.name).join(' ');patternBar+=`<option value="${p.id}" title="${escapeHTML(preview)}">${escapeHTML(p.name)}</option>`});patternBar+=`</select>`}
   else if(applied.length>=2){patternBar+=`<span class="cp-label" style="color:var(--ink-faint);font-size:9px">max 2 patterns</span>`}
   patternBar+=`</div>`;
 
   const lyCount=blockLyricLineCount(block);
-  const lineCtrl=`<div class="chord-lines-toolbar">
-    <span class="cl-count">Líneas: <b>${chordsToLines(chords).length}</b></span>
-    <button class="cl-btn" onclick="syncChordsToLyrics('${ch.id}','${block.id}')" title="Repartir en ${lyCount} línea(s), igual que la letra">⇋ Sincronizar con letra (${lyCount})</button>
-    <button class="cl-btn" onclick="gcAutoBars('${refTok(ref)}')" title="Una línea por compás">⊞ 1 compás/línea</button>
-    <button class="cl-btn" onclick="gcClear('${refTok(ref)}')" title="Unir todo en una línea">⥶ Unir en 1</button>
-    <span class="cl-hint">↵ corta línea · ⠿ arrastrá para mover de línea</span>
-  </div>`;
+
 
   const stack=renderChordLineStack(ref,chords);
   const fillClass=usedBeats===totalBeats?'ok':(usedBeats>totalBeats?'over':'under');
   const fill=`<div class="chord-fill ${fillClass}" data-fill="${ch.id}|${block.id}">${usedBeats} / ${totalBeats} beats filled${usedBeats>totalBeats?' (over!)':usedBeats<totalBeats?' ('+(totalBeats-usedBeats)+' free)':''}</div>`;
-  return patternBar+lineCtrl+stack+fill+`<textarea class="notes-area" placeholder="Strumming pattern, dynamics, notes…" oninput="setText('${ch.id}','${block.id}',this.value,'notes')">${escapeHTML(data.notes||'')}</textarea>`;
+  return patternBar+stack+fill+`<textarea class="notes-area" placeholder="Strumming pattern, dynamics, notes…" oninput="setText('${ch.id}','${block.id}',this.value,'notes')">${escapeHTML(data.notes||'')}</textarea>`;
 }
 
 function renderDrumGrid(ch,block,data){const rows=['HH','SN','KK','TM','CY'],bpb=sigBeats(),sub=4,total=block.bars*bpb*sub,p=data.pattern||(data.pattern={});let h='<div class="drum-grid">';rows.forEach(r=>{if(!p[r])p[r]=new Array(total).fill(false);while(p[r].length<total)p[r].push(false);h+=`<div class="drum-row"><div class="drum-label">${r}</div><div class="drum-cells" style="grid-template-columns:repeat(${total},1fr)">`;for(let i=0;i<total;i++)h+=`<div class="drum-cell${p[r][i]?' active':''}${i%sub===0?' beat-marker':''}" data-row="${r}" data-i="${i}" data-ch="${ch.id}" data-block="${block.id}"></div>`;h+='</div></div>'});return h+'</div>'}
@@ -82,7 +76,18 @@ function renderChannelView(){
     const d=document.createElement('div');
     d.className='block'+(block.enabled?'':' disabled')+(cur?' current':'');
     d.style.setProperty('--ch-color',ch.color);d.dataset.blockId=block.id;d.draggable=true;
-    d.innerHTML=`<div class="block-handle"><div class="block-num">${String(idx+1).padStart(2,'0')}</div><div class="block-bars">${block.bars}b</div></div><div class="block-body"><div class="block-meta">${renderSectionTag(block)}<span style="font-size:9px;color:var(--ink-faint)">Bars</span><input class="bars-input" type="number" min="1" max="32" value="${block.bars}" onchange="setBars('${block.id}',this.value)"><span style="font-size:9px;color:var(--ink-faint);margin-left:auto">${block.bars*sigBeats()} beats</span></div><div class="block-content">${renderContent(ch,block)}</div></div><div class="block-actions"><button class="${block.enabled?'toggle-on':''}" onclick="toggleBlockEnabled('${block.id}')" title="Toggle">${block.enabled?'●':'○'}</button><button onclick="duplicateBlock('${block.id}')" title="Duplicate">⧉</button><button class="del" onclick="if(confirm('Delete?'))deleteBlock('${block.id}')" title="Delete">×</button></div><div class="block-progress" style="width:${pp}%"></div>`;
+    d.innerHTML=`<div class="block-handle">
+    <div class="block-num">${String(idx+1).padStart(2,'0')}</div>
+    <div class="block-bars">${block.bars}b</div>
+    </div>
+    <div class="block-body">
+    <div class="block-meta">${renderSectionTag(block)}
+    <span style="font-size:9px;color:var(--ink-faint)">Bars</span>
+    <input class="bars-input" type="number" min="1" max="32" value="${block.bars}" onchange="setBars('${block.id}',this.value)">
+    <span style="font-size:9px;color:var(--ink-faint);margin-left:auto">${block.bars*sigBeats()} beats</span>
+    </div>
+    <div class="block-content">${renderContent(ch,block)}
+    </div></div><div class="block-actions"><button class="${block.enabled?'toggle-on':''}" onclick="toggleBlockEnabled('${block.id}')" title="Toggle">${block.enabled?'●':'○'}</button><button onclick="duplicateBlock('${block.id}')" title="Duplicate">⧉</button><button class="del" onclick="if(confirm('Delete?'))deleteBlock('${block.id}')" title="Delete">×</button></div><div class="block-progress" style="width:${pp}%"></div>`;
     cv.appendChild(d);cv.appendChild(makeInsertZone(idx+1));
   });
   bindDragAndDrop();bindDrumCells(ch);

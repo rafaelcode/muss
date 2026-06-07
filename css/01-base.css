@@ -80,7 +80,7 @@ input[type=number]{-moz-appearance:textfield}
   letter-spacing:.05em;margin-top:2px;text-transform:uppercase;
 }
 .song-info{
-  flex:1;display:grid;grid-template-columns:2fr 1.5fr 2fr;
+  flex:1;display:grid;grid-template-columns:2fr 1.5fr 1.2fr 2fr;
   gap:1px;background:var(--line);
 }
 .info-cell{
@@ -429,7 +429,7 @@ input[type=number]{-moz-appearance:textfield}
 }
 .chord-bar-cell:last-child{border-right:none}
 .chord-bar-num{position:absolute;top:2px;left:4px;font-size:8px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace}
-.chord-slots{position:relative;display:flex;align-items:stretch;min-height:64px;padding:14px 4px 4px;box-sizing:border-box;width:100%}
+.chord-slots{position:relative;display:flex;align-items:stretch;min-height:64px;padding:20px 0px 0px;box-sizing:border-box;width:100%}
 .chord-slot{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
   background:var(--accent-bg);border:1px solid rgba(79,110,247,.2);border-radius:6px;
@@ -783,3 +783,14 @@ input[type=number]{-moz-appearance:textfield}
 .main .chord-line{min-width:0}
 .main .chord-line .chord-slots{min-width:0}
 .main .block-content{min-width:0}
+
+/* Topbar genre select — styled to match info-cell inputs */
+.info-cell select{
+  background:transparent;border:none;color:var(--ink);
+  font-family:'Fraunces',serif;font-size:16px;font-weight:300;
+  outline:none;width:100%;cursor:pointer;
+  appearance:none;-webkit-appearance:none;padding:0 18px 0 0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%236b6a64' d='M0 0h8L4 5z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 0 center;
+}
+.info-cell select:focus{color:var(--accent)}

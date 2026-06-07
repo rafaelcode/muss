@@ -249,3 +249,51 @@ html,body{overflow:hidden}
   .lib-grid{grid-template-columns:1fr 1fr}
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   Library table: extra columns (beats, structure, chords) +
+   channel initials replacing the old dot indicators.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Channel initials (replaces .lib-chdot row) */
+.lib-chans{display:flex;gap:3px;flex-wrap:wrap}
+.lib-chini{
+  display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;
+  border-radius:4px;color:#fff;font-family:'Inter',sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:.02em;flex-shrink:0;
+}
+
+/* Structure mini-pills (one per section group) */
+.lib-struct{display:flex;flex-wrap:wrap;gap:2px;max-width:240px}
+.lib-stmini{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 4px;border-radius:4px;
+  color:#fff;font-family:'Inter',sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:.02em;flex-shrink:0;line-height:1;
+}
+.lib-stmini sup{font-size:7px;font-weight:500;margin-left:1px;opacity:.85;line-height:1}
+.lib-stmini-more{font-size:9px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;align-self:center;margin-left:3px}
+
+/* Chord mini-pills */
+.lib-chords-mini{display:flex;flex-wrap:wrap;gap:3px;max-width:260px}
+.lib-chordmini{
+  padding:2px 6px;border-radius:4px;background:var(--accent-bg);
+  border:1px solid rgba(79,110,247,.18);color:var(--accent);
+  font-family:'Fraunces',serif;font-size:11px;font-weight:500;
+  white-space:nowrap;line-height:1.3;
+}
+.lib-chordmore{
+  font-size:9px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;
+  align-self:center;padding:0 3px;
+}
+
+/* Column widths so wide content doesn't push the layout */
+.lib-table .col-beats{width:60px}
+.lib-table .col-struct{min-width:160px;max-width:260px}
+.lib-table .col-chords{min-width:160px;max-width:280px}
+.lib-table td.col-struct,.lib-table td.col-chords{padding-top:7px;padding-bottom:7px}
+
+/* On narrow screens, drop the heaviest extras */
+@media(max-width:900px){
+  .lib-table .col-struct,.lib-table .col-chords,.lib-table .col-beats{display:none}
+}

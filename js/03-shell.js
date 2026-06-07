@@ -1,11 +1,16 @@
 function renderAll(){renderTopBar();renderChannelsList();renderEditor();initSidebarResizer()}
-function renderTopBar(){if($('#songTitle').value!==STATE.song.title)$('#songTitle').value=STATE.song.title;if($('#songArtist').value!==STATE.song.artist)$('#songArtist').value=STATE.song.artist;if($('#songLink').value!==STATE.song.link)$('#songLink').value=STATE.song.link;if(parseInt($('#bpmInput').value)!==STATE.song.bpm)$('#bpmInput').value=STATE.song.bpm;$$('#sigPick button').forEach(b=>b.classList.toggle('active',b.dataset.sig===STATE.song.signature))}
+function renderTopBar(){if($('#songTitle').value!==STATE.song.title)$('#songTitle').value=STATE.song.title;if($('#songArtist').value!==STATE.song.artist)$('#songArtist').value=STATE.song.artist;if($('#songLink').value!==STATE.song.link)$('#songLink').value=STATE.song.link;const _g=STATE.song.genre||'';if($('#songGenre')&&$('#songGenre').value!==_g)$('#songGenre').value=_g;if(parseInt($('#bpmInput').value)!==STATE.song.bpm)$('#bpmInput').value=STATE.song.bpm;$$('#sigPick button').forEach(b=>b.classList.toggle('active',b.dataset.sig===STATE.song.signature))}
 
 /* ── Render: Channels list ── */
 function renderChannelsList(){const l=$('#channelsList');l.innerHTML='';STATE.song.channels.forEach(ch=>{const info=CH_TYPE_INFO[ch.type]||CH_TYPE_INFO.notes;const d=document.createElement('div');d.className='channel-item'+(ch.id===STATE.ui.activeChannelId?' active':'');d.style.setProperty('--ch-color',ch.color);d.dataset.channelId=ch.id;d.innerHTML=`<div class="channel-icon">${info.letter}</div><div class="channel-meta"><div class="channel-name">${escapeHTML(ch.name)}</div><div class="channel-type">${info.label}</div></div><button class="channel-mute ${ch.muted?'muted':''}" data-action="mute">${ch.muted?'M':'·'}</button><button class="channel-del" data-action="delete">×</button>`;l.appendChild(d)})}
 
 /* ── Render: Editor dispatch ── */
-function renderEditor(){if(STATE.ui.view==='channel')return renderChannelView();if(STATE.ui.view==='timeline')return renderTimeline();if(STATE.ui.view==='reading')return renderReading();return renderOverview()}
+function renderEditor(){
+  if(STATE.ui.view==='channel')return renderChannelView();
+  if(STATE.ui.view==='timeline')return renderTimeline();
+  if(STATE.ui.view==='reading')return renderReading();
+  if(STATE.ui.view==='summary')return renderSummary();
+  return renderOverview()}
 
 /* ── Render: Content by type ── */
 

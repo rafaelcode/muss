@@ -11,7 +11,7 @@ const LIB = {
   records: [],          // [{ libId, song, genre, favorite, createdAt, updatedAt }]
   sort: 'artist',       // artist | title | genre | bpm
   sortDir: 1,           // 1 asc, -1 desc (table headers toggle this)
-  view: 'grid',         // grid | list | table
+  view: 'table',         // grid | list | table
   nav: 'all',           // all | recent | favorites
   genre: null,          // genre filter or null
   search: '',
@@ -39,6 +39,39 @@ function libLoad(){
 }
 
 /* ── Record helpers (read derived metadata from the muss song) ── */
+/* Aggregates / helpers used by the library views. */
+function sigBeatsOf(sig){const n=parseInt((sig||'4/4').split('/')[0]);return isNaN(n)?4:n}
+function songTotalBeats(s){return (s.blocks||[]).reduce((a,b)=>a+(b.bars||0),0)*sigBeatsOf(s.signature)}
+function chHasContent(song,ch){
+  return (song.blocks||[]).some(b=>{
+    const d=b.content&&b.content[ch.id];if(!d)return false;
+    if(ch.type==='lyrics')return !!(d.text||'').trim();
+    if(ch.type==='rhythm')return (d.chords||[]).length>0||!!b.chordpro;
+    if(ch.type==='lead'||ch.type==='bass'){const t=Array.isArray(d.tab)?d.tab:[];return t.some(s=>Array.isArray(s)&&s.some(c=>c&&c!=='-'))}
+    if(ch.type==='drums'){const p=d.pattern||{};return Object.values(p).some(arr=>Array.isArray(arr)&&arr.some(v=>v))}
+    return !!(d.text||d.notes||'').trim();
+  });
+}
+function songActiveChannels(song){return (song.channels||[]).filter(ch=>chHasContent(song,ch))}
+function songChords(song){
+  const set=new Set();
+  (song.channels||[]).filter(c=>c.type==='rhythm').forEach(rh=>{
+    (song.blocks||[]).forEach(b=>{(b.content&&b.content[rh.id]&&b.content[rh.id].chords||[]).forEach(c=>{if(c.name)set.add(c.name.trim())})});
+  });
+  (song.blocks||[]).forEach(b=>{if(b.chordpro){const re=/\[([^\]]+)\]/g;let m;while((m=re.exec(b.chordpro)))set.add(m[1].trim())}});
+  return [...set];
+}
+/* Group consecutive same-section blocks: [{section,n}, ...] */
+function songStructure(song){
+  const out=[];
+  (song.blocks||[]).forEach(b=>{
+    const sec=b.section||'—';
+    if(out.length&&out[out.length-1].section===sec)out[out.length-1].n++;
+    else out.push({section:sec,n:1});
+  });
+  return out;
+}
+
 const meta = {
   title: r => r.song.title || 'Sin título',
   artist: r => r.song.artist || 'Artista desconocido',
@@ -47,6 +80,10 @@ const meta = {
   sig: r => r.song.signature || '4/4',
   link: r => r.song.link || '',
   channels: r => (r.song.channels || []).map(c => c.type),
+  activeChannels: r => songActiveChannels(r.song),
+  beats: r => songTotalBeats(r.song),
+  chords: r => songChords(r.song),
+  structure: r => songStructure(r.song),
 };
 
 /* Build a blank muss song (mirrors workbench defaults) */
@@ -91,6 +128,7 @@ function libSorted(list){
   const k = LIB.sort, dir = LIB.sortDir;
   return [...list].sort((a,b)=>{
     if(k==='bpm') return (meta.bpm(b)-meta.bpm(a))*dir*-1; // bpm default high→low when asc feels natural
+    if(k==='beats') return (meta.beats(b)-meta.beats(a))*dir*-1;
     const va=(k==='title'?meta.title(a):k==='genre'?meta.genre(a):meta.artist(a)).toLowerCase();
     const vb=(k==='title'?meta.title(b):k==='genre'?meta.genre(b):meta.artist(b)).toLowerCase();
     return (va<vb?-1:va>vb?1:0)*dir;
@@ -187,9 +225,28 @@ function libRenderList(){
 }
 
 /* ── Templates ───────────────────────────────────────────────── */
-function chDotsHTML(chans){
-  return ['lyrics','rhythm','lead','bass','drums','keys']
-    .map(c=>`<div class="lib-chdot ${chans.includes(c)?'on':''}"></div>`).join('');
+function chInitialsHTML(channels){
+  if(!channels||!channels.length)return '<span style="color:var(--ink-faint);font-size:10px">—</span>';
+  return channels.map(ch=>{
+    const info=(typeof CH_TYPE_INFO!=='undefined'&&CH_TYPE_INFO[ch.type])||{letter:'?',label:ch.type};
+    return `<span class="lib-chini" style="background:${ch.color||'#888'}" title="${escapeHTML(ch.name||info.label)}">${info.letter}</span>`;
+  }).join('');
+}
+/* Compact structure: pill-row of section initials (first letter, section color), groups ×N. */
+function structureMiniHTML(struct){
+  if(!struct||!struct.length)return '<span style="color:var(--ink-faint);font-size:10px">—</span>';
+  const SC=(typeof SECTION_COLORS!=='undefined')?SECTION_COLORS:{};
+  return struct.slice(0,16).map(g=>{
+    const col=SC[g.section]||'#999';const ini=(g.section||'?').charAt(0).toUpperCase();
+    return `<span class="lib-stmini" style="background:${col}" title="${escapeHTML(g.section)}${g.n>1?' ×'+g.n:''}">${ini}${g.n>1?'<sup>'+g.n+'</sup>':''}</span>`;
+  }).join('')+(struct.length>16?'<span class="lib-stmini-more">+'+(struct.length-16)+'</span>':'');
+}
+/* Compact chord list as pills */
+function chordsMiniHTML(chords){
+  if(!chords||!chords.length)return '<span style="color:var(--ink-faint);font-size:10px">—</span>';
+  const show=chords.slice(0,8);
+  const more=chords.length>show.length?`<span class="lib-chordmore">+${chords.length-show.length}</span>`:'';
+  return show.map(n=>`<span class="lib-chordmini">${escapeHTML(n)}</span>`).join('')+more;
 }
 
 function libCardHTML(r){
@@ -211,7 +268,7 @@ function libCardHTML(r){
       <div class="lib-card-meta">
         <span class="lib-bpm">${meta.bpm(r)||'—'} bpm</span>
         <span class="lib-sig">${escapeHTML(meta.sig(r))}</span>
-        <div class="lib-chans">${chDotsHTML(meta.channels(r))}</div>
+        <div class="lib-chans">${chInitialsHTML(meta.activeChannels(r))}</div>
       </div>
     </div>
   </div>`;
@@ -237,14 +294,17 @@ function libRowHTML(r,i){
 /* Searchable table view with sortable headers */
 function libTableHTML(data){
   const cols = [
-    { k:'#',        label:'#',        cls:'col-num' },
-    { k:'title',    label:'Título',   sort:'title' },
-    { k:'artist',   label:'Artista',  sort:'artist' },
-    { k:'genre',    label:'Género',   sort:'genre', cls:'col-genre' },
-    { k:'bpm',      label:'BPM',      sort:'bpm', cls:'center' },
-    { k:'sig',      label:'Compás',   cls:'center col-sig' },
-    { k:'chans',    label:'Canales',  cls:'center col-chans' },
-    { k:'acts',     label:'',         cls:'center' },
+    { k:'#',        label:'#',         cls:'col-num' },
+    { k:'title',    label:'Título',    sort:'title' },
+    { k:'artist',   label:'Artista',   sort:'artist' },
+    { k:'genre',    label:'Género',    sort:'genre', cls:'col-genre' },
+    { k:'bpm',      label:'BPM',       sort:'bpm', cls:'center' },
+    { k:'sig',      label:'Compás',    cls:'center col-sig' },
+    { k:'beats',    label:'Beats',     sort:'beats', cls:'center col-beats' },
+    { k:'struct',   label:'Estructura',cls:'col-struct' },
+    { k:'chords',   label:'Acordes',   cls:'col-chords' },
+    { k:'chans',    label:'Canales',   cls:'center col-chans' },
+    { k:'acts',     label:'',          cls:'center' },
   ];
   const arrow = c => c.sort===LIB.sort ? `<span class="arr">${LIB.sortDir>0?'▲':'▼'}</span>` : '';
   const head = cols.map(c=>{
@@ -259,7 +319,10 @@ function libTableHTML(data){
     <td class="col-genre">${meta.genre(r)?`<span class="lib-pill"><span class="lib-dot" style="background:${genreColor(meta.genre(r))}"></span>${escapeHTML(meta.genre(r))}</span>`:'<span style="color:var(--ink-faint)">—</span>'}</td>
     <td class="lib-td-mono lib-td-center">${meta.bpm(r)||'—'}</td>
     <td class="lib-td-mono lib-td-center col-sig">${escapeHTML(meta.sig(r))}</td>
-    <td class="lib-td-center col-chans"><div class="lib-chans" style="justify-content:center">${chDotsHTML(meta.channels(r))}</div></td>
+    <td class="lib-td-mono lib-td-center col-beats">${meta.beats(r)||'—'}</td>
+    <td class="col-struct"><div class="lib-struct">${structureMiniHTML(meta.structure(r))}</div></td>
+    <td class="col-chords"><div class="lib-chords-mini">${chordsMiniHTML(meta.chords(r))}</div></td>
+    <td class="lib-td-center col-chans"><div class="lib-chans" style="justify-content:center">${chInitialsHTML(meta.activeChannels(r))}</div></td>
     <td>
       <div class="lib-td-acts">
         <button class="lib-num fav ${r.favorite?'on':''}" onclick="event.stopPropagation();libFav('${r.libId}')" title="Favorito">${r.favorite?'♥':'♡'}</button>
