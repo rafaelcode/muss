@@ -436,6 +436,12 @@ function updateProgressBar(){
   const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block)return;
   const el=document.querySelector(`[data-block-id="${block.id}"] .block-progress`);
   if(el){const bs=(60/STATE.song.bpm).toFixed(3);el.style.transition=`width ${bs}s linear`;el.style.width=(STATE.ui.blockProgress*100)+'%'}
+  // Chord playhead cursor (block view): move across the chord row, hide in other blocks
+  const bs2=(60/STATE.song.bpm).toFixed(3);
+  document.querySelectorAll('.chord-playhead').forEach(ph=>{
+    if(ph.dataset.block===block.id){ph.classList.add('active');ph.style.transition=`left ${bs2}s linear`;ph.style.left=(STATE.ui.blockProgress*100)+'%'}
+    else{ph.classList.remove('active');ph.style.transition='none';ph.style.left='0%'}
+  });
   const beatPos=STATE.ui.blockProgress*block.bars*sigBeats();
   STATE.song.channels.forEach(ch=>{
     if(ch.type!=='rhythm')return;

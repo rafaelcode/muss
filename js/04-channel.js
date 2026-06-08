@@ -9,6 +9,19 @@ default:return`<textarea class="notes-area" placeholder="Notes…" oninput="setT
    sized proportionally to its beat-length. Bar dividers shown. Plus a
    pattern bar to save the current progression as a reusable alias and
    to apply saved patterns. */
+/* Beat ruler: ticks dividing the block's total beats equally, bar marks numbered. */
+function chordRulerHTML(block){
+  const bpb=sigBeats();const totalBeats=block.bars*bpb;
+  // Flex row of equal-width bars (like Ableton). Each bar shows its number + beat subticks.
+  let bars='';
+  for(let b=0;b<block.bars;b++){
+    let beats='';
+    for(let k=0;k<bpb;k++) beats+=`<div class="cr-beat${k===0?' first':''}"></div>`;
+    bars+=`<div class="cr-bar"><span class="cr-num">${b+1}</span><div class="cr-beats">${beats}</div></div>`;
+  }
+  return `<div class="chord-ruler" title="${block.bars} compases · ${totalBeats} beats">${bars}</div>`;
+}
+
 function renderChordEditor(ch,block,data){
   ensureProgs();
   const ref={type:'block',ci:ch.id,bi:block.id};
@@ -29,9 +42,13 @@ function renderChordEditor(ch,block,data){
 
 
   const stack=renderChordLineStack(ref,chords);
+  // Beat ruler (divides block time equally) + playhead cursor over the chord row.
+  const cur=STATE.ui.isPlaying&&STATE.song.blocks[STATE.ui.currentBlockIndex]&&STATE.song.blocks[STATE.ui.currentBlockIndex].id===block.id;
+  const phLeft=cur?(STATE.ui.blockProgress*100):0;
+  const chordArea=`<div class="chord-area">${chordRulerHTML(block)}${stack}<div class="chord-playhead${cur?' active':''}" data-block="${block.id}" style="left:${phLeft}%"></div></div>`;
   const fillClass=usedBeats===totalBeats?'ok':(usedBeats>totalBeats?'over':'under');
   const fill=`<div class="chord-fill ${fillClass}" data-fill="${ch.id}|${block.id}">${usedBeats} / ${totalBeats} beats filled${usedBeats>totalBeats?' (over!)':usedBeats<totalBeats?' ('+(totalBeats-usedBeats)+' free)':''}</div>`;
-  return patternBar+stack+fill+`<textarea class="notes-area" placeholder="Strumming pattern, dynamics, notes…" oninput="setText('${ch.id}','${block.id}',this.value,'notes')">${escapeHTML(data.notes||'')}</textarea>`;
+  return patternBar+chordArea+fill+`<textarea class="notes-area" placeholder="Strumming pattern, dynamics, notes…" oninput="setText('${ch.id}','${block.id}',this.value,'notes')">${escapeHTML(data.notes||'')}</textarea>`;
 }
 
 function renderDrumGrid(ch,block,data){const rows=['HH','SN','KK','TM','CY'],bpb=sigBeats(),sub=4,total=block.bars*bpb*sub,p=data.pattern||(data.pattern={});let h='<div class="drum-grid">';rows.forEach(r=>{if(!p[r])p[r]=new Array(total).fill(false);while(p[r].length<total)p[r].push(false);h+=`<div class="drum-row"><div class="drum-label">${r}</div><div class="drum-cells" style="grid-template-columns:repeat(${total},1fr)">`;for(let i=0;i<total;i++)h+=`<div class="drum-cell${p[r][i]?' active':''}${i%sub===0?' beat-marker':''}" data-row="${r}" data-i="${i}" data-ch="${ch.id}" data-block="${block.id}"></div>`;h+='</div></div>'});return h+'</div>'}
@@ -72,7 +89,6 @@ function renderChannelView(){
   cv.appendChild(makeInsertZone(0));
   STATE.song.blocks.forEach((block,idx)=>{
     const cur=STATE.ui.isPlaying&&idx===STATE.ui.currentBlockIndex;
-    const pp=cur?(STATE.ui.blockProgress*100):0;
     const d=document.createElement('div');
     d.className='block'+(block.enabled?'':' disabled')+(cur?' current':'');
     d.style.setProperty('--ch-color',ch.color);d.dataset.blockId=block.id;d.draggable=true;
@@ -87,7 +103,7 @@ function renderChannelView(){
     <span style="font-size:9px;color:var(--ink-faint);margin-left:auto">${block.bars*sigBeats()} beats</span>
     </div>
     <div class="block-content">${renderContent(ch,block)}
-    </div></div><div class="block-actions"><button class="${block.enabled?'toggle-on':''}" onclick="toggleBlockEnabled('${block.id}')" title="Toggle">${block.enabled?'●':'○'}</button><button onclick="duplicateBlock('${block.id}')" title="Duplicate">⧉</button><button class="del" onclick="if(confirm('Delete?'))deleteBlock('${block.id}')" title="Delete">×</button></div><div class="block-progress" style="width:${pp}%"></div>`;
+    </div></div><div class="block-actions"><button class="${block.enabled?'toggle-on':''}" onclick="toggleBlockEnabled('${block.id}')" title="Toggle">${block.enabled?'●':'○'}</button><button onclick="duplicateBlock('${block.id}')" title="Duplicate">⧉</button><button class="del" onclick="if(confirm('Delete?'))deleteBlock('${block.id}')" title="Delete">×</button></div>`;
     cv.appendChild(d);cv.appendChild(makeInsertZone(idx+1));
   });
   bindDragAndDrop();bindDrumCells(ch);
