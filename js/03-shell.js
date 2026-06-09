@@ -1,4 +1,4 @@
-function renderAll(){renderTopBar();renderChannelsList();renderEditor();initSidebarResizer()}
+function renderAll(){renderTopBar();renderChannelsList();renderEditor();initSidebarResizer();initMobileNav()}
 function renderTopBar(){if($('#songTitle').value!==STATE.song.title)$('#songTitle').value=STATE.song.title;if($('#songArtist').value!==STATE.song.artist)$('#songArtist').value=STATE.song.artist;if($('#songLink').value!==STATE.song.link)$('#songLink').value=STATE.song.link;const _g=STATE.song.genre||'';if($('#songGenre')&&$('#songGenre').value!==_g)$('#songGenre').value=_g;if(parseInt($('#bpmInput').value)!==STATE.song.bpm)$('#bpmInput').value=STATE.song.bpm;$$('#sigPick button').forEach(b=>b.classList.toggle('active',b.dataset.sig===STATE.song.signature))}
 
 /* ── Render: Channels list ── */
@@ -45,4 +45,24 @@ function initSidebarResizer(){
     document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
   });
   _sidebarResizerBound=true;
+}
+
+/* ── Mobile nav: turn the workbench sidebar into a slide-in drawer ── */
+let _mobileNavBound=false;
+function initMobileNav(){
+  if(_mobileNavBound)return;
+  const btn=document.getElementById('wbMenuBtn');
+  const overlay=document.getElementById('wbOverlay');
+  const sidebar=document.querySelector('#screen-workbench .sidebar');
+  if(!btn||!overlay||!sidebar)return;
+  const open=()=>{sidebar.classList.add('open');overlay.classList.add('show')};
+  const close=()=>{sidebar.classList.remove('open');overlay.classList.remove('show')};
+  btn.addEventListener('click',()=>sidebar.classList.contains('open')?close():open());
+  overlay.addEventListener('click',close);
+  // Auto-close after picking a channel or a view on mobile
+  sidebar.addEventListener('click',e=>{
+    if(window.innerWidth>720)return;
+    if(e.target.closest('.channel-item')||e.target.closest('.view-tab'))close();
+  });
+  _mobileNavBound=true;
 }

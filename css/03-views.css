@@ -743,3 +743,23 @@
   content:'';position:absolute;top:-4px;left:50%;transform:translateX(-50%);
   width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--accent);
 }
+
+/* Empty chord placeholder (unfilled beats) — keeps row aligned with the ruler */
+.chord-slot.empty{
+  background:repeating-linear-gradient(135deg,transparent,transparent 5px,rgba(0,0,0,.025) 5px,rgba(0,0,0,.025) 10px);
+  border:1px dashed var(--line-mid)!important;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  min-width:24px;transition:background .12s,border-color .12s;
+}
+.chord-slot.empty:hover{border-color:var(--accent)!important;background:var(--accent-bg)}
+.chord-empty-label{font-size:9px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;pointer-events:none}
+.chord-slot.empty:hover .chord-empty-label{color:var(--accent)}
+/* ── Editor chrome on mobile ── */
+@media(max-width:720px){
+  .editor-head{flex-wrap:wrap;gap:8px;padding:10px 12px;height:auto}
+  .canvas{padding:12px}
+  .chord-patterns{flex-wrap:wrap}
+  .summary-canvas{padding:12px}
+  .cc-toolbar{flex-wrap:wrap}
+  .cc-search{min-width:140px}
+}

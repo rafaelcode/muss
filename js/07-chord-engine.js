@@ -147,15 +147,23 @@ function gcAddLineAfter(tok,li){
    Insertion happens through dynamic GAPS: a gap between two cards splits the
    line at that point (gcSplitAt); the gap at the end of a row adds a chord
    (gcAddChordAt). No fixed +/+fila buttons. */
-function renderChordLineStack(ref,chords){
+function renderChordLineStack(ref,chords,fillBeats){
   const bpb=sigBeats();const tok=refTok(ref);
   const lines=chordsToLines(chords);
+  // Total chord beats across all lines; if a block target (fillBeats) is given and chords
+  // under-fill it, the remaining beats render as an empty placeholder slot so the row
+  // always spans the full block width (aligned with the ruler).
+  const sumAll=lines.reduce((s,ln)=>s+ln.reduce((a,c)=>a+(c.beats||bpb),0),0);
+  const emptyTail=(fillBeats&&fillBeats>sumAll)?(fillBeats-sumAll):0;
   // Longest row (by beats) defines full width; every row scales to the same beat→px ratio.
-  const maxBeats=Math.max(bpb,...lines.map(ln=>ln.reduce((s,c)=>s+(c.beats||bpb),0)));
+  const maxBeats=Math.max(bpb,fillBeats||0,...lines.map(ln=>ln.reduce((s,c)=>s+(c.beats||bpb),0)));
   const dataAttrs=ref.type==='prog'?`data-prog="${ref.progId}"`:`data-ch="${ref.ci}" data-block="${ref.bi}"`;
   let stack='<div class="chord-line-stack">';let g=0;
   lines.forEach((ln,li)=>{
-    const lineBeats=ln.reduce((s,c)=>s+(c.beats||bpb),0)||bpb;
+    const rawLineBeats=ln.reduce((s,c)=>s+(c.beats||bpb),0)||bpb;
+    const isLastLine=(li===lines.length-1);
+    const lineEmpty=isLastLine?emptyTail:0;
+    const lineBeats=rawLineBeats+lineEmpty;
     const barCount=Math.max(1,Math.round(lineBeats/bpb));
     const pct=(lineBeats/maxBeats*100).toFixed(2);
     stack+=`<div class="chord-line" title="Línea ${li+1} · ${lineBeats}b · ${barCount} compás(es)">`;
@@ -174,6 +182,10 @@ function renderChordLineStack(ref,chords){
         stack+=`<button class="chord-gap" onclick="gcSplitAt('${tok}',${i})" title="Bajar lo de la derecha a una fila nueva"><span class="chord-gap-bar"></span></button>`;
       }
     });
+    // Empty placeholder for unfilled beats (keeps the row aligned with the ruler).
+    if(lineEmpty>0){
+      stack+=`<div class="chord-slot empty" title="${lineEmpty}b libres · clic para agregar acorde" style="flex-grow:${lineEmpty};flex-shrink:1;flex-basis:0" onclick="gcAddChordAt('${tok}',${li})"><span class="chord-empty-label">+ ${lineEmpty}b</span></div>`;
+    }
     stack+=`</div>`;
     // end-of-row gap → add a chord into this row (blocked if no room) + delete-row
     stack+=`<div class="chord-line-actions"><button class="chord-gap end" onclick="gcAddChordAt('${tok}',${li})" title="Agregar acorde en esta fila"><span class="chord-gap-bar"></span><span class="chord-gap-plus">+</span></button>${lines.length>1?`<button class="cl-line-del" onclick="gcRemoveLine('${tok}',${li})" title="Eliminar esta fila">×</button>`:''}</div>`;

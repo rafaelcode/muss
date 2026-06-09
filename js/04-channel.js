@@ -41,7 +41,7 @@ function renderChordEditor(ch,block,data){
   const lyCount=blockLyricLineCount(block);
 
 
-  const stack=renderChordLineStack(ref,chords);
+  const stack=renderChordLineStack(ref,chords,totalBeats);
   // Beat ruler (divides block time equally) + playhead cursor over the chord row.
   const cur=STATE.ui.isPlaying&&STATE.song.blocks[STATE.ui.currentBlockIndex]&&STATE.song.blocks[STATE.ui.currentBlockIndex].id===block.id;
   const phLeft=cur?(STATE.ui.blockProgress*100):0;
