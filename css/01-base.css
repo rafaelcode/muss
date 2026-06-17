@@ -548,7 +548,9 @@ input[type=number]{-moz-appearance:textfield}
 .tdiv{color:var(--accent);opacity:.55;font-weight:600}
 .tbody{display:inline-flex}
 .tcell{display:inline-block;text-align:center;min-width:1ch;color:var(--ink)}
-.tcell.tcur{background:var(--accent);color:#fff;border-radius:1px}
+.tcell.tcol{background:var(--accent-bg);color:var(--ink);border-radius:1px}
+.tcell.tcur{background:var(--accent);color:#fff;border-radius:1px;animation:tab-blink 1.05s step-end infinite}
+@keyframes tab-blink{50%{background:var(--accent-bg);color:var(--ink)}}
 .tab-grid{
   font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.45;
   background:var(--bg-1);border:1px solid var(--line-mid);border-radius:7px;
@@ -858,3 +860,20 @@ input[type=number]{-moz-appearance:textfield}
   .top-actions .action-btn{padding:0 9px}
   .sidebar{width:86vw}
 }
+
+/* Transport hidden (Resumen / Lectura) — collapse smoothly, reclaim vertical space */
+.transport{transition:height .2s var(--ease,ease),opacity .2s ease,padding .2s ease}
+.transport.tr-hidden{height:0;opacity:0;padding-top:0;padding-bottom:0;border-bottom-color:transparent;overflow:hidden;pointer-events:none}
+
+/* ── View-tabs strip (top of editor) — primary navigation, always visible ── */
+.view-bar{
+  display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;flex-shrink:0;
+  background:var(--bg-1);border-bottom:1px solid var(--line);
+}
+.view-bar .view-tab{border-top:none}
+
+/* ── Channels sidebar only in Channel view; elsewhere hide it entirely (editor full width) ── */
+#screen-workbench.no-channels .main{grid-template-columns:1fr}
+#screen-workbench.no-channels .sidebar,
+#screen-workbench.no-channels .sidebar-resizer{display:none}
+#screen-workbench.no-channels .wb-menu-btn{display:none}

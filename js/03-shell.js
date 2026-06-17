@@ -6,6 +6,7 @@ function renderChannelsList(){const l=$('#channelsList');l.innerHTML='';STATE.so
 
 /* ── Render: Editor dispatch ── */
 function renderEditor(){
+  applyTransportVisibility();
   if(STATE.ui.view==='channel')return renderChannelView();
   if(STATE.ui.view==='timeline')return renderTimeline();
   if(STATE.ui.view==='reading')return renderReading();

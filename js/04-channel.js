@@ -1,7 +1,22 @@
 function renderContent(ch,block){const data=block.content[ch.id]||defaultContent(ch.type);switch(ch.type){
 case'lyrics':return`<textarea class="lyric-area" placeholder="Write lyrics here…" oninput="setText('${ch.id}','${block.id}',this.value)">${escapeHTML(data.text||'')}</textarea>`;
 case'rhythm':return renderChordEditor(ch,block,data);
-case'lead':case'bass':{const cid=`tab_${ch.id}_${block.id}`;const tt=tabType(ch);const ns=tt==='bass'?4:6;return`<div class="tab-toolbar"><button class="tab-tool-btn" onclick="saveRiff('${ch.id}','${block.id}','${tt}')" title="Save this tab as a reusable riff">★ Save as riff</button><span class="tab-strings-badge">${ns} strings · ${block.bars} bar${block.bars>1?'s':''} · ${tabColsPerBar()} steps/bar</span></div>${renderTabEditor(ch.id,block.id,tt,cid)}<div class="tab-hint">Click a cell, type fret numbers · ← → move · | marks each bar · Paste auto-fits to ${ns} strings</div>`}
+case'lead':case'bass':{
+  const cid=`tab_${ch.id}_${block.id}`;const tt=tabType(ch);const ns=tt==='bass'?4:6;
+  const curPlay=STATE.ui.isPlaying&&STATE.song.blocks[STATE.ui.currentBlockIndex]&&STATE.song.blocks[STATE.ui.currentBlockIndex].id===block.id;
+  const phLeft=curPlay?(STATE.ui.blockProgress*100):0;
+  // Riff apply control — pick a saved riff from the song library, same as applying a pattern to a chord block.
+  const libRiffs=((STATE.song.library&&STATE.song.library.riffs)?STATE.song.library.riffs:[]).filter(r=>r.type===tt);
+  const appliedRiff=data.riffId?libRiffs.find(r=>r.id===data.riffId):null;
+  let riffBar='';
+  if(appliedRiff){riffBar+=`<span class="cp-chip"><span class="cp-chip-name" onclick="applyRiff('${ch.id}','${block.id}','${appliedRiff.id}')" title="Re-apply riff">${escapeHTML(appliedRiff.name)}</span><span class="cp-chip-del" onclick="removeRiffFromBlock('${ch.id}','${block.id}')" title="Quitar referencia del riff">×</span></span>`;}
+  if(libRiffs.length){riffBar+=`<select class="cp-select" onchange="if(this.value){applyRiff('${ch.id}','${block.id}',this.value);this.value=''}"><option value="">+ Apply riff…</option>`+libRiffs.map(r=>`<option value="${r.id}">${escapeHTML(r.name)}</option>`).join('')+`</select>`;}
+  const toolbar=`<div class="tab-toolbar"><button class="tab-tool-btn" onclick="saveRiff('${ch.id}','${block.id}','${tt}')" title="Save this tab as a reusable riff">★ Save as riff</button>${riffBar}<span class="tab-strings-badge">${ns} strings · ${block.bars} bar${block.bars>1?'s':''} · ${tabColsPerBar()} steps/bar</span></div>`;
+  // Beat ruler on top + playhead cursor over the grid (mirrors the chord block).
+  const area=`<div class="chord-area tab-area">${chordRulerHTML(block)}${renderTabEditor(ch.id,block.id,tt,cid)}<div class="tab-ph-track"><div class="chord-playhead${curPlay?' active':''}" data-block="${block.id}" style="left:${phLeft}%"></div></div></div>`;
+  const hint=`<div class="tab-hint">Click a cell, type fret numbers · ← → move · <b>−</b> insert space (push right) · <b>Ctrl/⌘+Enter</b> add column · <b>Ctrl/⌘+⌫</b> delete column · | marks each bar · <b>Ctrl/⌘+V</b> paste (replace) · <b>Ctrl/⌘+Shift+Alt+V</b> paste block at cursor (per string) · auto-fits to ${ns} strings</div>`;
+  return toolbar+area+hint;
+}
 case'drums':return renderDrumGrid(ch,block,data);
 default:return`<textarea class="notes-area" placeholder="Notes…" oninput="setText('${ch.id}','${block.id}',this.value)">${escapeHTML(data.text||'')}</textarea>`}}
 
@@ -53,6 +68,18 @@ function renderChordEditor(ch,block,data){
 
 function renderDrumGrid(ch,block,data){const rows=['HH','SN','KK','TM','CY'],bpb=sigBeats(),sub=4,total=block.bars*bpb*sub,p=data.pattern||(data.pattern={});let h='<div class="drum-grid">';rows.forEach(r=>{if(!p[r])p[r]=new Array(total).fill(false);while(p[r].length<total)p[r].push(false);h+=`<div class="drum-row"><div class="drum-label">${r}</div><div class="drum-cells" style="grid-template-columns:repeat(${total},1fr)">`;for(let i=0;i<total;i++)h+=`<div class="drum-cell${p[r][i]?' active':''}${i%sub===0?' beat-marker':''}" data-row="${r}" data-i="${i}" data-ch="${ch.id}" data-block="${block.id}"></div>`;h+='</div></div>'});return h+'</div>'}
 
+/* Lyrics paste sub-view (the "Lyrics" tab): full-lyrics textarea + distribute actions. */
+function renderLyricsMaster(ch,cv){
+  cv.className='canvas';cv.style.cssText='';cv.innerHTML='';
+  const lt=document.createElement('div');lt.innerHTML=lyricsTabsHTML(ch);cv.appendChild(lt.firstElementChild);
+  const mp=document.createElement('div');mp.className='lyrics-master';
+  mp.innerHTML=`<div class="lm-head"><div class="lm-title">Full Lyrics Paste</div><div class="lm-hint">Separate sections with a blank line. Each section maps to a block.</div></div><textarea id="lyricsMaster" class="lm-textarea" placeholder="Paste your full lyrics here…"></textarea><div class="lm-actions"><div class="lm-stats" id="lmStats">0 sections</div><button class="lm-btn" onclick="distributeLyrics('${ch.id}','append')">→ Add as new blocks</button><button class="lm-btn primary" onclick="distributeLyrics('${ch.id}','replace')">↻ Distribute to blocks</button></div>`;
+  cv.appendChild(mp);
+  const ta=mp.querySelector('#lyricsMaster');
+  ta.value=STATE.song.blocks.map(b=>(b.content[ch.id]?.text||'').trim()).filter(Boolean).join('\n\n');
+  updateLyricsStats(ta.value);ta.addEventListener('input',()=>updateLyricsStats(ta.value));
+}
+
 /* ── Render: Channel view ── */
 function renderChannelView(){
   const ch=STATE.song.channels.find(c=>c.id===STATE.ui.activeChannelId);
@@ -71,17 +98,25 @@ function renderChannelView(){
     if(!STATE.ui.tabTab) STATE.ui.tabTab='blocks';
     if(STATE.ui.tabTab==='riffs') return renderRiffCatalog(ch,cv);
   }
-  if(!STATE.song.blocks.length){cv.innerHTML='<div class="empty-state"><h4>No blocks yet</h4><p>Click + Add Block to start.</p></div>';return}
-  cv.innerHTML='';
-  // Lyrics master panel when this is lyrics channel
+  // Lyrics channel: route to the Lyrics paste sub-view (Blocks | Lyrics).
+  // Default tab: if no lyrics written yet → the paste view; otherwise → the blocks.
   if(ch.type==='lyrics'){
-    const mp=document.createElement('div');mp.className='lyrics-master';
-    mp.innerHTML=`<div class="lm-head"><div class="lm-title">Full Lyrics Paste</div><div class="lm-hint">Separate sections with a blank line. Each section maps to a block.</div></div><textarea id="lyricsMaster" class="lm-textarea" placeholder="Paste your full lyrics here…"></textarea><div class="lm-actions"><div class="lm-stats" id="lmStats">0 sections</div><button class="lm-btn" onclick="distributeLyrics('${ch.id}','append')">→ Add as new blocks</button><button class="lm-btn primary" onclick="distributeLyrics('${ch.id}','replace')">↻ Distribute to blocks</button></div>`;
-    cv.appendChild(mp);
-    const ta=mp.querySelector('#lyricsMaster');
-    ta.value=STATE.song.blocks.map(b=>(b.content[ch.id]?.text||'').trim()).filter(Boolean).join('\n\n');
-    updateLyricsStats(ta.value);ta.addEventListener('input',()=>updateLyricsStats(ta.value));
+    if(!STATE.ui.lyricsTab){
+      const hasLyrics=STATE.song.blocks.some(b=>(((b.content[ch.id]||{}).text)||'').trim());
+      STATE.ui.lyricsTab=hasLyrics?'blocks':'lyrics';
+    }
+    if(STATE.ui.lyricsTab==='lyrics') return renderLyricsMaster(ch,cv);
   }
+  if(!STATE.song.blocks.length){
+    cv.innerHTML='';
+    if(ch.type==='lyrics'){const lt=document.createElement('div');lt.innerHTML=lyricsTabsHTML(ch);cv.appendChild(lt.firstElementChild);}
+    const es=document.createElement('div');es.className='empty-state';
+    es.innerHTML=ch.type==='lyrics'?'<h4>No blocks yet</h4><p>Use the <b>Lyrics</b> tab to paste full lyrics, or + Add Block.</p>':'<h4>No blocks yet</h4><p>Click + Add Block to start.</p>';
+    cv.appendChild(es);return;
+  }
+  cv.innerHTML='';
+  // Lyrics channel: sub-tab bar (Blocks | Lyrics)
+  if(ch.type==='lyrics'){const lt=document.createElement('div');lt.innerHTML=lyricsTabsHTML(ch);cv.appendChild(lt.firstElementChild)}
   // Rhythm channel: sub-tab bar (Blocks | Patterns | Chords)
   if(ch.type==='rhythm'){const t=document.createElement('div');t.innerHTML=rhythmTabsHTML(ch);cv.appendChild(t.firstElementChild)}
   // Lead/bass channel: sub-tab bar (Blocks | Riff Library)
@@ -93,7 +128,7 @@ function renderChannelView(){
     d.className='block'+(block.enabled?'':' disabled')+(cur?' current':'');
     d.style.setProperty('--ch-color',ch.color);d.dataset.blockId=block.id;d.draggable=true;
     d.innerHTML=`<div class="block-handle">
-    <div class="block-num">${String(idx+1).padStart(2,'0')}</div>
+    <div class="block-num seek-num" title="Reproducir desde aquí" onclick="event.stopPropagation();seekToBlock('${block.id}')">${String(idx+1).padStart(2,'0')}</div>
     <div class="block-bars">${block.bars}b</div>
     </div>
     <div class="block-body">
@@ -110,7 +145,7 @@ function renderChannelView(){
   if(ch.type==='rhythm') requestAnimationFrame(()=>{STATE.song.blocks.forEach(bl=>bindChordDrag(ch.id,bl.id));bindChordDnDAll();});
   if(ch.type==='lead'||ch.type==='bass'){
     requestAnimationFrame(()=>{
-      $$('.tabgrid').forEach(g=>{bindTabEditor(g.id);fitTabFont(g.id)});
+      $$('.tabgrid').forEach(g=>{bindTabEditor(g.id);fitTabFont(g.id);alignTabOverlay(g.id)});
     });
   }
 }

@@ -31,7 +31,12 @@ function ovColTemplate(channels){
       return Math.max(200,Math.ceil(px)+32)+'px';
     }
     if(c.type==='lead'||c.type==='bass')return'minmax(160px,1fr)';
-    if(c.type==='rhythm')return'minmax(140px,1fr)';
+    if(c.type==='rhythm'){
+      // Width to fit the block with the most chords, so the Acordes column never clips
+      // (1fr would shrink it on narrow screens). Horizontal scroll reveals it fully.
+      let maxChords=1;STATE.song.blocks.forEach(b=>{const n=getChords(b,c.id).length;if(n>maxChords)maxChords=n});
+      return Math.max(160,maxChords*58+16)+'px';
+    }
     return'minmax(150px,1fr)';
   });
   return`108px ${cols.join(' ')} 32px`;
@@ -156,7 +161,7 @@ function buildOverviewRow(block,i,columns,tpl,repeatMap){
   d.dataset.blockId=block.id;d.draggable=true;d.style.gridTemplateColumns=tpl;
 
   let html=`<div class="ov-gutter block-handle" draggable="false">
-    <div class="ov-gutter-top"><span class="ov-gutter-num">${String(i+1).padStart(2,'0')}</span><span class="ov-gutter-beats">${block.bars*sigBeats()}b</span></div>
+    <div class="ov-gutter-top"><span class="ov-gutter-num seek-num" title="Reproducir desde aquí" onclick="event.stopPropagation();seekToBlock('${block.id}')">${String(i+1).padStart(2,'0')}</span><span class="ov-gutter-beats">${block.bars*sigBeats()}b</span></div>
     ${renderSectionTag(block)}
     <div class="ov-gutter-bars"><label>Bars</label><input class="bars-input" type="number" min="1" max="32" value="${block.bars}" onchange="setBars('${block.id}',this.value)"></div>
   </div>`;
@@ -426,19 +431,80 @@ function clickSound(a){if(!audioCtx||audioCtx.state!=='running')return;try{const
 function renderBeatLeds(){const n=sigBeats(),r=$('#beatLeds');r.innerHTML='';for(let i=0;i<n;i++){const l=document.createElement('div');l.className='led'+(i===0?' downbeat':'');r.appendChild(l)}}
 function lightBeat(b){$$('#beatLeds .led').forEach((l,i)=>l.classList.toggle('on',i===b))}
 function togglePlay(){STATE.ui.isPlaying?pausePlayback():startPlayback()}
-function startPlayback(){ensureAudio();STATE.ui.isPlaying=true;STATE.ui.blockProgress=0;$('#playBtn').classList.add('active');$('#playIcon').innerHTML='<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';if(STATE.ui.countIn>0){STATE.ui.isCountingIn=true;STATE.ui.countInBeatsLeft=STATE.ui.countIn*sigBeats();startCountIn()}else{STATE.ui.isCountingIn=false;startMetronome()}}
+function startPlayback(){ensureAudio();STATE.ui.isPlaying=true;STATE.ui.blockProgress=0;$('#playBtn').classList.add('active');$('#playIcon').innerHTML='<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';const go=()=>{STATE.ui.playBeats=0;if(STATE.ui.countIn>0){STATE.ui.isCountingIn=true;STATE.ui.countInBeatsLeft=STATE.ui.countIn*sigBeats();startCountIn()}else{STATE.ui.isCountingIn=false;startMetronome()}};if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume().then(go).catch(go);else go()}
 function startCountIn(){const iv=60000/STATE.song.bpm,bpb=sigBeats(),tot=STATE.ui.countInBeatsLeft;function tick(){if(STATE.ui.countInBeatsLeft<=0){clearInterval(STATE.ui.metronomeTimer);STATE.ui.isCountingIn=false;startMetronome();return}const b=(tot-STATE.ui.countInBeatsLeft)%bpb;clickSound(b===0);lightBeat(b);STATE.ui.countInBeatsLeft--}tick();STATE.ui.metronomeTimer=setInterval(tick,iv)}
 function pausePlayback(){STATE.ui.isPlaying=false;STATE.ui.isCountingIn=false;STATE.ui.blockProgress=0;$('#playBtn').classList.remove('active');$('#playIcon').innerHTML='<path d="M8 5v14l11-7z"/>';if(STATE.ui.metronomeTimer)clearInterval(STATE.ui.metronomeTimer);STATE.ui.metronomeTimer=null;$$('#beatLeds .led').forEach(l=>l.classList.remove('on'));$$('.chord-slot.chord-active').forEach(s=>s.classList.remove('chord-active'));renderEditor()}
 function stopPlayback(){pausePlayback();STATE.ui.currentBlockIndex=0;STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;renderEditor()}
+/* Advance the looping cursor on pattern/riff cards: each card loops over its own
+   bar length (data-loop-beats), in sync with the metronome beat. Same style as the
+   block playhead; never touches block playheads. */
+function updateLoopPlayheads(beat){
+  const iv=(60/STATE.song.bpm).toFixed(3);
+  document.querySelectorAll('.chord-playhead[data-loop-beats]').forEach(ph=>{
+    const lb=parseInt(ph.dataset.loopBeats)||sigBeats();
+    const idx=((beat%lb)+lb)%lb;
+    ph.classList.add('active');
+    if(idx===0){
+      ph.style.transition='none';ph.style.left='0%';
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{ph.style.transition=`left ${iv}s linear`;ph.style.left=(100/lb)+'%'}));
+    }else{
+      ph.style.transition=`left ${iv}s linear`;
+      ph.style.left=((idx+1)/lb*100)+'%';
+    }
+  });
+}
+/* Transport (metronome) is only useful where playback drives a cursor:
+   Channel, Overview and Timeline. Hide it (smoothly) on Resumen/Lectura and
+   auto-stop any running playback so nothing keeps ticking off-screen. */
+function applyTransportVisibility(){
+  const show=['channel','overview','timeline'].indexOf(STATE.ui.view)>=0;
+  const tr=document.querySelector('.transport');
+  if(tr) tr.classList.toggle('tr-hidden',!show);
+  // Channels sidebar shows only in the Channel view; elsewhere hide it (tabs live in the view-bar).
+  const scr=document.getElementById('screen-workbench');
+  if(scr) scr.classList.toggle('no-channels',STATE.ui.view!=='channel');
+  if(!show && STATE.ui.isPlaying){
+    // auto-stop inline (no recursive re-render)
+    STATE.ui.isPlaying=false;STATE.ui.isCountingIn=false;STATE.ui.blockProgress=0;
+    if(STATE.ui.metronomeTimer){clearInterval(STATE.ui.metronomeTimer);STATE.ui.metronomeTimer=null}
+    const pb=$('#playBtn');if(pb)pb.classList.remove('active');
+    const pi=$('#playIcon');if(pi)pi.innerHTML='<path d="M8 5v14l11-7z"/>';
+    $$('#beatLeds .led').forEach(l=>l.classList.remove('on'));
+  }
+}
+/* Click a block's number to jump playback to that block (and re-sync the metronome).
+   If stopped, it starts playback from there; if playing, it seeks there cleanly.
+   Resizing (the bars input) is a separate control and never triggers this. */
+function seekToBlock(blockId){
+  const idx=STATE.song.blocks.findIndex(b=>b.id===blockId);
+  if(idx<0)return;
+  STATE.ui.currentBlockIndex=idx;
+  STATE.ui.currentBeat=0;
+  STATE.ui.blockProgress=0;
+  if(STATE.ui.isPlaying){
+    // Re-sync: restart the metronome so the next click lands on this block's beat 0.
+    if(STATE.ui.metronomeTimer){clearInterval(STATE.ui.metronomeTimer);STATE.ui.metronomeTimer=null}
+    STATE.ui.isCountingIn=false;
+    STATE.ui.playBeats=0;
+    startMetronome();
+  } else {
+    startPlayback(); // begins at this block (honours count-in)
+  }
+}
+function markCurrentBlock(){
+  const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block)return;
+  document.querySelectorAll('.block').forEach(b=>b.classList.toggle('current',b.dataset.blockId===block.id));
+  document.querySelectorAll('.chord-playhead:not([data-loop-beats])').forEach(ph=>{const on=ph.dataset.block===block.id;ph.classList.toggle('active',on);ph.style.transition='none';ph.style.left='0%'});
+}
 function restartMetronome(){if(STATE.ui.metronomeTimer)clearInterval(STATE.ui.metronomeTimer);startMetronome()}
-function startMetronome(){const iv=60000/STATE.song.bpm,bpb=sigBeats();function tick(){const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block){stopPlayback();return}if(!block.enabled){STATE.ui.currentBlockIndex++;STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;if(STATE.ui.currentBlockIndex>=STATE.song.blocks.length){stopPlayback();return}renderEditor();scrollToCurrentBlock();return}const tot=block.bars*bpb;clickSound(STATE.ui.currentBeat===0);lightBeat(STATE.ui.currentBeat%bpb);const tp=(STATE.ui.currentBeat+1)/tot;if(STATE.ui.currentBeat===0){STATE.ui.blockProgress=0;renderEditor();scrollToCurrentBlock();requestAnimationFrame(()=>requestAnimationFrame(()=>{STATE.ui.blockProgress=tp;updateProgressBar()}))}else{STATE.ui.blockProgress=tp;updateProgressBar()}updateTLPlayhead();STATE.ui.currentBeat++;if(STATE.ui.currentBeat>=tot){STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;STATE.ui.currentBlockIndex++;if(STATE.ui.currentBlockIndex>=STATE.song.blocks.length)stopPlayback()}}tick();STATE.ui.metronomeTimer=setInterval(tick,iv)}
+function startMetronome(){const iv=60000/STATE.song.bpm,bpb=sigBeats();function tick(){const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block){stopPlayback();return}if(!block.enabled){STATE.ui.currentBlockIndex++;STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;if(STATE.ui.currentBlockIndex>=STATE.song.blocks.length){stopPlayback();return}if(STATE.ui.view==='channel')markCurrentBlock();else renderEditor();scrollToCurrentBlock();return}const tot=block.bars*bpb;clickSound(STATE.ui.currentBeat===0);lightBeat(STATE.ui.currentBeat%bpb);updateLoopPlayheads(STATE.ui.playBeats);STATE.ui.playBeats++;const tp=(STATE.ui.currentBeat+1)/tot;if(STATE.ui.currentBeat===0){STATE.ui.blockProgress=0;if(STATE.ui.view==='channel')markCurrentBlock();else renderEditor();scrollToCurrentBlock();requestAnimationFrame(()=>requestAnimationFrame(()=>{STATE.ui.blockProgress=tp;updateProgressBar()}))}else{STATE.ui.blockProgress=tp;updateProgressBar()}updateTLPlayhead();STATE.ui.currentBeat++;if(STATE.ui.currentBeat>=tot){STATE.ui.currentBeat=0;STATE.ui.blockProgress=0;STATE.ui.currentBlockIndex++;if(STATE.ui.currentBlockIndex>=STATE.song.blocks.length)stopPlayback()}}tick();STATE.ui.metronomeTimer=setInterval(tick,iv)}
 function updateProgressBar(){
   const block=STATE.song.blocks[STATE.ui.currentBlockIndex];if(!block)return;
   const el=document.querySelector(`[data-block-id="${block.id}"] .block-progress`);
   if(el){const bs=(60/STATE.song.bpm).toFixed(3);el.style.transition=`width ${bs}s linear`;el.style.width=(STATE.ui.blockProgress*100)+'%'}
   // Chord playhead cursor (block view): move across the chord row, hide in other blocks
   const bs2=(60/STATE.song.bpm).toFixed(3);
-  document.querySelectorAll('.chord-playhead').forEach(ph=>{
+  document.querySelectorAll('.chord-playhead:not([data-loop-beats])').forEach(ph=>{
     if(ph.dataset.block===block.id){ph.classList.add('active');ph.style.transition=`left ${bs2}s linear`;ph.style.left=(STATE.ui.blockProgress*100)+'%'}
     else{ph.classList.remove('active');ph.style.transition='none';ph.style.left='0%'}
   });
@@ -505,7 +571,9 @@ function init(){
 
   // Library boot: load saved songs, seed on first run, wire the dashboard.
   libLoad();
+  setLoad();
   if(!LIB.records.length){ librarySeed(); libSave(); }
+  librarySeedFamous();
   libBind();
   $('#wbBack').addEventListener('click', libBack);
   libRender();
@@ -516,6 +584,21 @@ function init(){
    Aggregates everything we know so far: structure, channels,
    chords, notes, patterns, riffs, lyrics, key estimate.
    ═══════════════════════════════════════════════════════════ */
+/* Resumen → which saved riff matches a block's tab (fallback when no riffId stored). */
+function summaryRiffForTab(tab){
+  if(!tab||typeof tab!=='object'||!Array.isArray(tab.cols))return null;
+  const j=JSON.stringify(tab.cols);
+  const riffs=(STATE.song.library&&STATE.song.library.riffs)?STATE.song.library.riffs:[];
+  return riffs.find(r=>JSON.stringify(r.cols)===j)||null;
+}
+/* Resumen → jump into a channel/sub-view. */
+function smActivateChannelView(){STATE.ui.view='channel';$$('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view==='channel'))}
+function smGoChannel(chId){const ch=STATE.song.channels.find(c=>c.id===chId);if(!ch)return;STATE.ui.activeChannelId=chId;if(ch.type==='rhythm')STATE.ui.rhythmTab='blocks';if(ch.type==='lead'||ch.type==='bass')STATE.ui.tabTab='blocks';smActivateChannelView();renderEditor()}
+function smGoPatterns(){const rh=STATE.song.channels.find(c=>c.type==='rhythm');if(!rh){flash('Sin canal rítmico');return}STATE.ui.activeChannelId=rh.id;STATE.ui.rhythmTab='patterns';smActivateChannelView();renderEditor()}
+function smGoRiffs(){const lc=STATE.song.channels.find(c=>c.type==='lead'||c.type==='bass');if(!lc){flash('Sin canal lead/bass');return}STATE.ui.activeChannelId=lc.id;STATE.ui.tabTab='riffs';smActivateChannelView();renderEditor()}
+
+function smToggleStruct(){STATE.ui.smStructOnly=!STATE.ui.smStructOnly;renderSummary()}
+function smToggleBlock(id){STATE.ui.smCollapsed=STATE.ui.smCollapsed||{};STATE.ui.smCollapsed[id]=!STATE.ui.smCollapsed[id];renderSummary()}
 function renderSummary(){
   const s=STATE.song;
 
@@ -605,31 +688,76 @@ function renderSummary(){
 
     <!-- 2-column grid: lyrics (left) + analysis cards (right) -->
     <div class="sm-grid">
-      <div class="sm-card sm-lyrics">
-        <div class="sm-card-head"><span class="sm-card-title">Letra completa</span>
-          <span class="sm-card-sub">${lyricsLines} líneas · ${lyricsWords} palabras</span></div>
+      <div class="sm-card sm-structlyrics">
+        <div class="sm-card-head"><span class="sm-card-title">Estructura y letra</span>
+          <span class="sm-card-sub">${s.blocks.length} bloques · ${lyricsLines} líneas</span>
+          <button class="sm-toggle" onclick="smToggleStruct()" title="Agrupar / mostrar solo la estructura">${STATE.ui.smStructOnly?'⊞ Con letra':'⊟ Solo estructura'}</button></div>
         <div class="sm-card-body">
-          <pre class="sm-lyrics-text">${lyricsText?escapeHTML(lyricsText):'<em style="color:var(--ink-faint)">Sin letra cargada</em>'}</pre>
+          <div class="sm-sl${STATE.ui.smStructOnly?' min':''}">${s.blocks.map((b,i)=>{
+            const col=SECTION_COLORS[b.section]||'#999';
+            const ly=((lyCh&&b.content[lyCh.id]&&b.content[lyCh.id].text)||'').trim();
+            const indiv=!!(STATE.ui.smCollapsed&&STATE.ui.smCollapsed[b.id]);
+            const hide=STATE.ui.smStructOnly||indiv;          // hidden by global toggle or per-section
+            const caret=STATE.ui.smStructOnly?'':`<span class="sm-sl-caret">${indiv?'▸':'▾'}</span>`;
+            // Summarised labels: rhythm pattern(s) + riff(s) used by this block.
+            const patNames=[],riffNames=[];
+            s.channels.forEach(cch=>{
+              const cont=b.content[cch.id]; if(!cont)return;
+              if(cch.type==='rhythm')(cont.appliedPatterns||[]).forEach(pid=>{const p=(s.progressions||[]).find(x=>x.id===pid);if(p)patNames.push(p.name)});
+              if(cch.type==='lead'||cch.type==='bass'){let rf=cont.riffId?((s.library&&s.library.riffs)?s.library.riffs:[]).find(r=>r.id===cont.riffId):null;if(!rf)rf=summaryRiffForTab(cont.tab);if(rf)riffNames.push(rf.name);}
+            });
+            const useTags=patNames.map(n=>`<span class="sm-use-tag pat" title="Patrón rítmico: ${escapeHTML(n)}" onclick="event.stopPropagation();smGoPatterns()">♫ ${escapeHTML(n)}</span>`).join('')
+                        +riffNames.map(n=>`<span class="sm-use-tag riff" title="Riff: ${escapeHTML(n)}" onclick="event.stopPropagation();smGoRiffs()">▦ ${escapeHTML(n)}</span>`).join('');
+            return `<div class="sm-sl-block${hide?' collapsed':''}">
+              <div class="sm-sl-head"${STATE.ui.smStructOnly?'':` onclick="smToggleBlock('${b.id}')" title="Mostrar/ocultar la letra de esta sección"`}>${caret}<span class="sm-sl-tag" style="background:${col}">${escapeHTML(b.section||'—')}</span><span class="sm-sl-bars">${b.bars}b</span>${useTags}<span class="sm-sl-idx">#${String(i+1).padStart(2,'0')}</span></div>
+              ${hide?'':(ly?`<pre class="sm-sl-lyrics">${escapeHTML(ly)}</pre>`:`<div class="sm-sl-empty">— sin letra —</div>`)}
+            </div>`;
+          }).join('')}</div>
         </div>
       </div>
 
       <div class="sm-col-right">
 
-        <!-- Structure timeline -->
+        <!-- Channels (first) -->
         <div class="sm-card">
-          <div class="sm-card-head"><span class="sm-card-title">Estructura</span>
-            <span class="sm-card-sub">${s.blocks.length} bloques · ${totalBars} bars</span></div>
+          <div class="sm-card-head"><span class="sm-card-title">Canales</span>
+            <span class="sm-card-sub">${s.channels.length} total</span></div>
           <div class="sm-card-body">
-            <div class="sm-struct">${s.blocks.map((b,i)=>{
-              const col=SECTION_COLORS[b.section]||'#999';
-              return `<div class="sm-struct-block" style="background:${col};flex-grow:${b.bars||1}" title="#${i+1} ${b.section||''} · ${b.bars}b">
-                <span class="sm-struct-name">${escapeHTML(b.section||'—')}</span>
-                <span class="sm-struct-bars">${b.bars}b</span></div>`;
-            }).join('')}</div>
-            <div class="sm-section-counts">${Object.entries(secCount).map(([sec,n])=>{
-              const col=SECTION_COLORS[sec]||'#999';
-              return `<span class="sm-pill" style="background:${col}22;color:${col};border-color:${col}55">${sec} <b>×${n}</b></span>`;
-            }).join('')}</div>
+            ${s.channels.length?`<div class="sm-channels">${s.channels.map(ch=>{
+              const info=CH_TYPE_INFO[ch.type]||{letter:'?',label:ch.type};
+              const extra=ch.type==='rhythm'?` · ${chPatterns[ch.id]||0} patrones`:
+                          (ch.type==='lead'||ch.type==='bass')?` · ${riffsCount} riffs`:'';
+              return `<div class="sm-channel" onclick="smGoChannel('${ch.id}')" title="Ir al canal">
+                <div class="sm-ch-icon" style="background:${ch.color}">${info.letter}</div>
+                <div class="sm-ch-info">
+                  <div class="sm-ch-name">${escapeHTML(ch.name)}</div>
+                  <div class="sm-ch-type">${info.label}${extra}</div>
+                </div>
+              </div>`;
+            }).join('')}</div>`:`<div class="sm-empty">Sin canales</div>`}
+          </div>
+        </div>
+
+        <!-- Patterns -->
+        <div class="sm-card">
+          <div class="sm-card-head"><span class="sm-card-title">Patrones</span>
+            <span class="sm-card-sub">${patternsCount} ${patternsCount===1?'patrón':'patrones'}</span></div>
+          <div class="sm-card-body">
+            ${patternsCount?`<div class="sm-patterns">${(s.progressions||[]).map(p=>{
+              const chordNames=(p.chords||[]).map(c=>(c.name||'').trim()).filter(Boolean).join(' · ');
+              return `<div class="sm-pat" onclick="smGoPatterns()" title="Ver patrones"><div class="sm-pat-name">${escapeHTML(p.name||'Patrón')}</div><div class="sm-pat-chords">${escapeHTML(chordNames||'—')}</div></div>`;
+            }).join('')}</div>`:`<div class="sm-empty">Sin patrones guardados</div>`}
+          </div>
+        </div>
+
+        <!-- Riffs -->
+        <div class="sm-card">
+          <div class="sm-card-head"><span class="sm-card-title">Riffs</span>
+            <span class="sm-card-sub">${riffsCount} riffs</span></div>
+          <div class="sm-card-body">
+            ${riffsCount?`<div class="sm-riffs">${(s.library&&s.library.riffs?s.library.riffs:[]).map(rf=>{
+              return `<div class="sm-riff" onclick="smGoRiffs()" title="Ver riffs"><div class="sm-riff-name">${escapeHTML(rf.name||'Riff')}</div><div class="sm-riff-meta">${escapeHTML((rf.type||'').toUpperCase())}${rf.cols?` · ${rf.cols.length} cols`:''}</div></div>`;
+            }).join('')}</div>`:`<div class="sm-empty">Sin riffs guardados</div>`}
           </div>
         </div>
 
@@ -648,26 +776,6 @@ function renderSummary(){
             <span class="sm-card-sub">${notesUsed.size}/12 notas</span></div>
           <div class="sm-card-body">
             <div class="sm-notes-circle">${CHROMATIC.map(n=>`<span class="sm-note${notesUsed.has(n)?' on':''}">${n}</span>`).join('')}</div>
-          </div>
-        </div>
-
-        <!-- Channels -->
-        <div class="sm-card">
-          <div class="sm-card-head"><span class="sm-card-title">Canales</span>
-            <span class="sm-card-sub">${s.channels.length} total</span></div>
-          <div class="sm-card-body">
-            ${s.channels.length?`<div class="sm-channels">${s.channels.map(ch=>{
-              const info=CH_TYPE_INFO[ch.type]||{letter:'?',label:ch.type};
-              const extra=ch.type==='rhythm'?` · ${chPatterns[ch.id]||0} patrones`:
-                          (ch.type==='lead'||ch.type==='bass')?` · ${riffsCount} riffs`:'';
-              return `<div class="sm-channel">
-                <div class="sm-ch-icon" style="background:${ch.color}">${info.letter}</div>
-                <div class="sm-ch-info">
-                  <div class="sm-ch-name">${escapeHTML(ch.name)}</div>
-                  <div class="sm-ch-type">${info.label}${extra}</div>
-                </div>
-              </div>`;
-            }).join('')}</div>`:`<div class="sm-empty">Sin canales</div>`}
           </div>
         </div>
 

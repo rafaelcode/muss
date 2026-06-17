@@ -99,15 +99,15 @@
         <button class="add-ch-btn" data-action="open-channel-modal">+</button>
       </div>
       <div class="channels-list" id="channelsList"></div>
-      <div class="view-tabs">
-        <button class="view-tab" data-view="channel">Channel</button>
-        <button class="view-tab active" data-view="summary">Resumen</button>
-        <button class="view-tab " data-view="overview">Overview</button>
-        <button class="view-tab" data-view="reading">Lectura</button>
-        <button class="view-tab" data-view="timeline">Timeline</button>
-      </div>
     </aside>
     <section class="editor" id="editor">
+      <div class="view-bar" id="viewBar">
+        <button class="view-tab active" data-view="summary">Resumen</button>
+        <button class="view-tab" data-view="reading">Lectura</button>
+        <button class="view-tab" data-view="overview">Overview</button>
+        <button class="view-tab" data-view="channel">Channel</button>
+        <button class="view-tab" data-view="timeline">Timeline</button>
+      </div>
       <div class="editor-head" id="editorHead"></div>
       <div class="canvas" id="canvas"></div>
     </section>
@@ -181,6 +181,17 @@
           <div class="lib-nav" data-nav="favorites">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 16s-7-4.35-7-8.5a4.5 4.5 0 019 0 4.5 4.5 0 019 0C21 11.65 10 16 10 16z"/></svg>
             Favoritas<span class="lib-nav-count" id="cntFav">0</span>
+          </div>
+          <div class="lib-nav" data-nav="setlists">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h11M3 10h11M3 15h7" stroke-linecap="round"/><circle cx="16" cy="14.6" r="2.1"/><path d="M18.1 14.6V8.4" stroke-linecap="round"/></svg>
+            Setlists<span class="lib-nav-count" id="cntSet">0</span>
+          </div>
+        </div>
+        <div class="lib-side-section">
+          <div class="lib-side-label">Herramientas</div>
+          <div class="lib-nav" data-nav="chords">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="14" r="2.4"/><circle cx="15" cy="11.5" r="2.4"/><path d="M8.4 14V4l9 -1.6V11.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Catálogo de acordes
           </div>
         </div>
         <div class="lib-side-section grow">

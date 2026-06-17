@@ -250,7 +250,7 @@ function renderPatternCatalog(ch,cv){
         <button class="pattern-card-del" onclick="deleteProgression('${prog.id}')" title="Delete">×</button>
       </div>
       <div class="pattern-card-body">       
-        ${stack}        
+        <div class="chord-area pattern-area">${chordRulerHTML({bars:numBars})}${stack}<div class="chord-playhead" data-loop-beats="${totalBeats}" style="left:0%"></div></div>
         <div class="pattern-card-actions">
           <button class="pattern-apply-btn" onclick="applyPatternToBlock('${ch.id}','${prog.id}')">Apply to block…</button>
           <button class="pattern-dup-btn" onclick="duplicatePattern('${prog.id}')">⧉ Duplicate &amp; edit</button>
@@ -380,6 +380,8 @@ function tabChannelTabsHTML(ch){
   return`<div class="tab-channel-tabs"><button class="tab-channel-tab${STATE.ui.tabTab==='blocks'?' active':''}" onclick="setTabTab('blocks')">Blocks</button><button class="tab-channel-tab${STATE.ui.tabTab==='riffs'?' active':''}" onclick="setTabTab('riffs')">Riff Library</button></div>`;
 }
 function setTabTab(tab){STATE.ui.tabTab=tab;renderEditor()}
+function lyricsTabsHTML(ch){return`<div class="tab-channel-tabs"><button class="tab-channel-tab${(STATE.ui.lyricsTab||'blocks')==='blocks'?' active':''}" onclick="setLyricsTab('blocks')">Blocks</button><button class="tab-channel-tab${STATE.ui.lyricsTab==='lyrics'?' active':''}" onclick="setLyricsTab('lyrics')">Lyrics</button></div>`;}
+function setLyricsTab(tab){STATE.ui.lyricsTab=tab;renderEditor()}
 
 /* Save current block's tab as a named riff in the library */
 function saveRiff(ci,bi,type){
@@ -400,10 +402,23 @@ function applyRiff(ci,bi,riffId){
   const riff=STATE.song.library.riffs.find(r=>r.id===riffId);if(!riff)return;
   const b=STATE.song.blocks.find(x=>x.id===bi);if(!b)return;
   if(!b.content[ci])b.content[ci]={};
-  b.content[ci].tab={cols:JSON.parse(JSON.stringify(riff.cols))};
-  flash('Applied "'+riff.name+'"');renderEditor();
+  const src=riff.cols||[];
+  let cols=JSON.parse(JSON.stringify(src));
+  let reps=1;
+  // If the riff is shorter than the block, tile it as many whole times as fit
+  // (without exceeding the block). conformGridCols pads any remainder with dashes.
+  const blockCols=tabTotalCols(b);
+  if(src.length>0 && src.length<blockCols){
+    reps=Math.floor(blockCols/src.length);
+    cols=[];
+    for(let k=0;k<reps;k++) src.forEach(c=>cols.push({...c}));
+  }
+  b.content[ci].tab={cols};
+  b.content[ci].riffId=riffId; // remember the source riff (for the Resumen labels)
+  flash('Applied "'+riff.name+'"'+(reps>1?(' ×'+reps):''));renderEditor();
 }
 
+function removeRiffFromBlock(ci,bi){const b=STATE.song.blocks.find(x=>x.id===bi);if(b&&b.content[ci]){delete b.content[ci].riffId;renderEditor()}}
 function deleteRiff(riffId){
   ensureRiffs();
   STATE.song.library.riffs=STATE.song.library.riffs.filter(r=>r.id!==riffId);
@@ -442,9 +457,8 @@ function renderRiffCatalog(ch,cv){
   riffs.forEach(riff=>{
     const labels=tabStringSet(tt);
     const cols=riff.cols||[];
-    // Build text preview
-    const preview=labels.map(l=>l+'|'+cols.map(c=>c[l]||'-').join('')+'|').join('\n');
-    const nBars=Math.max(1,Math.round(cols.length/(sigBeats()*4)));
+    const nBars=Math.max(1,Math.round((cols.length||tabColsPerBar())/(sigBeats()*4)));
+    const rcid='riff_'+riff.id;
     const card=document.createElement('div');card.className='riff-card';
     card.innerHTML=`
       <div class="riff-card-head">
@@ -456,7 +470,8 @@ function renderRiffCatalog(ch,cv){
       </div>
       <div class="riff-card-body">
         <div class="riff-card-meta">${labels.length} strings · ${cols.length} cols · ${nBars} bar${nBars!==1?'s':''}</div>
-        <div class="riff-card-preview">${escapeHTML(preview)}</div>
+        <div class="chord-area tab-area riff-area">${chordRulerHTML({bars:nBars})}${renderTabEditor(ch.id,riff.id,tt,rcid)}<div class="tab-ph-track"><div class="chord-playhead" data-loop-beats="${nBars*sigBeats()}" style="left:0%"></div></div></div>
+        <div class="tab-hint">Click a cell, type fret numbers · ← → move · <b>−</b> insert space · <b>Ctrl/⌘+Enter</b> add · <b>Ctrl/⌘+⌫</b> delete · <b>Ctrl/⌘+Shift+Alt+V</b> paste block</div>
         <div class="riff-card-actions">
           <button class="riff-apply-btn" onclick="applyRiffToBlock('${ch.id}','${riff.id}','${tt}')">Apply to block…</button>
           <button class="riff-dup-btn" onclick="duplicateRiff('${riff.id}')">⧉ Duplicate</button>
@@ -465,6 +480,7 @@ function renderRiffCatalog(ch,cv){
     grid.appendChild(card);
   });
   wrap.appendChild(grid);cv.appendChild(wrap);
+  requestAnimationFrame(()=>{riffs.forEach(rf=>{const cid='riff_'+rf.id;bindTabEditor(cid);fitTabFont(cid);alignTabOverlay(cid);});});
 }
 
 function renameRiffById(riffId,name){ensureRiffs();const r=STATE.song.library.riffs.find(x=>x.id===riffId);if(r&&name.trim())r.name=name.trim()}
@@ -508,7 +524,7 @@ function bindDragAndDrop(){$$('.block,.overview-block,.ov-row').forEach(el=>{
 function parseLyricsSections(t){return t&&t.trim()?t.replace(/\r\n/g,'\n').split(/\n\s*\n+/).map(s=>s.trim()).filter(Boolean):[]}
 function updateLyricsStats(t){const s=parseLyricsSections(t);const e=document.getElementById('lmStats');if(e)e.textContent=`${s.length} section${s.length===1?'':'s'} · ${STATE.song.blocks.length} blocks`}
 function guessSec(t){const f=t.split('\n')[0].trim().toUpperCase().replace(/[\[\]():]/g,'').replace(/\d+/g,'').trim();const m={INTRO:'INTRO',VERSE:'VERSE','PRE-CHORUS':'PRE-CHORUS',PRECHORUS:'PRE-CHORUS',CHORUS:'CHORUS',HOOK:'CHORUS',BRIDGE:'BRIDGE',SOLO:'SOLO',INSTRUMENTAL:'INSTRUMENTAL',BREAKDOWN:'BREAKDOWN',OUTRO:'OUTRO',ENDING:'OUTRO'};for(const k in m)if(f===k||f.startsWith(k+' '))return m[k];return'VERSE'}
-function distributeLyrics(ci,mode){const ta=document.getElementById('lyricsMaster');if(!ta)return;const secs=parseLyricsSections(ta.value);if(!secs.length){flash('No sections');return}if(mode==='append'){secs.forEach(t=>{const id=addBlock(guessSec(t),4);STATE.song.blocks.find(x=>x.id===id).content[ci]={text:t}});flash(secs.length+' added')}else{secs.forEach((t,i)=>{let b=STATE.song.blocks[i];if(!b){const id=addBlock(guessSec(t),4);b=STATE.song.blocks.find(x=>x.id===id)}b.content[ci]={...(b.content[ci]||{}),text:t}});flash('Distributed')}renderAll()}
+function distributeLyrics(ci,mode){const ta=document.getElementById('lyricsMaster');if(!ta)return;const secs=parseLyricsSections(ta.value);if(!secs.length){flash('No sections');return}if(mode==='append'){secs.forEach(t=>{const id=addBlock(guessSec(t),4);STATE.song.blocks.find(x=>x.id===id).content[ci]={text:t}});flash(secs.length+' added')}else{secs.forEach((t,i)=>{let b=STATE.song.blocks[i];if(!b){const id=addBlock(guessSec(t),4);b=STATE.song.blocks.find(x=>x.id===id)}b.content[ci]={...(b.content[ci]||{}),text:t}});flash('Distributed')}STATE.ui.lyricsTab='blocks';renderAll()}
 
 /* ── Structured Tab Editor ──────────────────────────────
    Tab is stored as a column grid so the 6/4-string frame can NEVER
@@ -590,9 +606,14 @@ function normalizeTab(text,type){
 }
 
 /* ── Live editing state (which cell the cursor is on) ── */
-const TAB_CURSOR={}; // tid -> {col}
+const TAB_CURSOR={}; // tid -> {col,lab}
+let TAB_ACTIVE_ID=null; // only this grid shows the cursor/column highlight
+let TAB_INSERT_PASTE=null; // when set to a containerId, the next paste inserts a block at the cursor
 
 function getTabGridFromBlock(ci,bi,type){
+  // Riff editing: `bi` may be the id of a saved library riff (edited in the Riff Library).
+  const _riff=(STATE.song.library&&STATE.song.library.riffs)?STATE.song.library.riffs.find(r=>r.id===bi):null;
+  if(_riff)return parseTabGrid({cols:_riff.cols||[]},type); // free-form, not bar-locked
   const b=STATE.song.blocks.find(x=>x.id===bi);
   if(!b)return null;
   if(!b.content[ci])b.content[ci]={};
@@ -630,6 +651,8 @@ function rescaleGridCols(grid,newTotal){
   return grid;
 }
 function saveTabGrid(ci,bi,grid){
+  const _riff=(STATE.song.library&&STATE.song.library.riffs)?STATE.song.library.riffs.find(r=>r.id===bi):null;
+  if(_riff){_riff.cols=grid.cols.map(c=>({...c}));return;}
   const b=STATE.song.blocks.find(x=>x.id===bi);
   if(!b)return;
   if(!b.content[ci])b.content[ci]={};
@@ -639,8 +662,11 @@ function saveTabGrid(ci,bi,grid){
 /* Render the structured editor into a container. Auto-sizes font to fit. */
 function renderTabEditor(ci,bi,type,containerId){
   const grid=getTabGridFromBlock(ci,bi,type);
-  const cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:grid.cols.length-1;
   const labels=grid.labels;
+  // Only the active grid (clicked block) shows the column highlight + blinking string.
+  const showCur=(containerId===TAB_ACTIVE_ID)&&TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null;
+  const cur=showCur?TAB_CURSOR[containerId].col:-1;
+  const curLab=showCur?(TAB_CURSOR[containerId].lab||labels[labels.length-1]):null;
   const cpb=tabColsPerBar(); // columns per measure
   const bars=Math.max(1,Math.round(grid.cols.length/cpb));
   let rows='';
@@ -649,7 +675,7 @@ function renderTabEditor(ci,bi,type,containerId){
     grid.cols.forEach((c,x)=>{
       // bar separator BEFORE this column when it starts a new measure (not the first)
       if(x>0 && x%cpb===0) cells+=`<span class="tbar tdiv">|</span>`;
-      cells+=`<span class="tcell${x===cur?' tcur':''}" data-col="${x}" data-lab="${lab}">${escapeHTML(c[lab]||'-')}</span>`;
+      const isCol=(x===cur);const isCur=(isCol&&lab===curLab);cells+=`<span class="tcell${isCol?' tcol':''}${isCur?' tcur':''}" data-col="${x}" data-lab="${lab}">${escapeHTML(c[lab]||'-')}</span>`;
     });
     rows+=`<div class="trow"><span class="tlbl">${lab}</span><span class="tbar">|</span><span class="tbody">${cells}</span><span class="tbar">|</span></div>`;
   });
@@ -662,12 +688,14 @@ function tabInsertColumn(containerId){
   const el=document.getElementById(containerId); if(!el)return;
   const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
   const grid=getTabGridFromBlock(ci,bi,type);
-  const cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:grid.cols.length-1;
-  const at=clamp(cur+1,0,grid.cols.length);
-  const blank={}; grid.labels.forEach(l=>blank[l]='-');
-  grid.cols.splice(at,0,blank);
+  const cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:0;
+  // Shift every string's content one step right from the cursor; insert a blank column at cur.
+  for(let x=grid.cols.length-1;x>cur;x--) grid.labels.forEach(l=>{grid.cols[x][l]=grid.cols[x-1][l]});
+  grid.labels.forEach(l=>{grid.cols[cur][l]='-'});
   saveTabGrid(ci,bi,grid);
-  TAB_CURSOR[containerId]={col:at};
+  const _lab=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab);
+  TAB_ACTIVE_ID=containerId;
+  TAB_CURSOR[containerId]={col:cur,lab:_lab};
   refreshTabEditor(containerId);
 }
 
@@ -678,20 +706,32 @@ function tabRemoveColumn(containerId){
   const grid=getTabGridFromBlock(ci,bi,type);
   if(grid.cols.length<=1)return;
   const cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:grid.cols.length-1;
-  grid.cols.splice(cur,1);
+  // Pull every string's content one step left from the cursor; last column becomes blank.
+  for(let x=cur;x<grid.cols.length-1;x++) grid.labels.forEach(l=>{grid.cols[x][l]=grid.cols[x+1][l]});
+  grid.labels.forEach(l=>{grid.cols[grid.cols.length-1][l]='-'});
   saveTabGrid(ci,bi,grid);
-  TAB_CURSOR[containerId]={col:clamp(cur-1,0,grid.cols.length-1)};
+  const _lab=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab);
+  TAB_ACTIVE_ID=containerId;
+  TAB_CURSOR[containerId]={col:clamp(cur,0,grid.cols.length-1),lab:_lab};
   refreshTabEditor(containerId);
 }
 
 function refreshTabEditor(containerId){
   const el=document.getElementById(containerId); if(!el)return;
   const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
+  const hadFocus=(document.activeElement===el)||(TAB_ACTIVE_ID===containerId);
   const html=renderTabEditor(ci,bi,type,containerId);
   const tmp=document.createElement('div'); tmp.innerHTML=html;
   el.replaceWith(tmp.firstElementChild);
   bindTabEditor(containerId);
   fitTabFont(containerId);
+  // Re-focus the rebuilt grid so the user can fire commands/characters consecutively.
+  const fresh=document.getElementById(containerId);
+  if(fresh){
+    const lab=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab);
+    if(lab) fresh.dataset.activeLab=lab;
+    if(hadFocus) fresh.focus({preventScroll:true});
+  }
 }
 
 /* Auto-scale font so all columns fit the width — no horizontal scroll. */
@@ -707,44 +747,89 @@ function fitTabFont(containerId){
   el.style.fontSize=fs+'px';
 }
 
+/* Align the beat ruler + playhead track to the tab's content region (after the
+   string label + leading bar, before the trailing bar) so they line up with the
+   actual fret columns. */
+function alignTabOverlay(containerId){
+  const grid=document.getElementById(containerId); if(!grid)return;
+  const area=grid.closest('.tab-area'); if(!area)return;
+  const cells=grid.querySelectorAll('.tcell'); if(!cells.length)return;
+  const aR=area.getBoundingClientRect();
+  const first=cells[0].getBoundingClientRect();
+  const last=cells[cells.length-1].getBoundingClientRect();
+  const l=Math.max(0,first.left-aR.left);
+  const rgt=Math.max(0,aR.right-last.right);
+  area.style.setProperty('--tab-inset-l',l+'px');
+  area.style.setProperty('--tab-inset-r',rgt+'px');
+}
+
 /* Keyboard + click handling for the structured grid. */
 function bindTabEditor(containerId){
   const el=document.getElementById(containerId); if(!el)return;
+  if(el.dataset.bound==='1')return; // already bound — avoid duplicate listeners (double moves)
+  el.dataset.bound='1';
   const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
 
   // click a cell → place cursor there
   el.querySelectorAll('.tcell').forEach(cell=>{
     cell.addEventListener('mousedown',e=>{
       e.preventDefault();
-      TAB_CURSOR[containerId]={col:parseInt(cell.dataset.col)};
+      const _lab=cell.dataset.lab;el.dataset.activeLab=_lab;
+      // Clear highlight from any other grid so only this block shows the cursor.
+      document.querySelectorAll('.tcell.tcol,.tcell.tcur').forEach(c=>c.classList.remove('tcol','tcur'));
+      TAB_ACTIVE_ID=containerId;
+      TAB_CURSOR[containerId]={col:parseInt(cell.dataset.col),lab:_lab};
       el.focus();
-      markCursor(el,parseInt(cell.dataset.col));
+      markCursor(el,parseInt(cell.dataset.col),_lab);
     });
   });
 
   el.addEventListener('keydown',e=>{
+    if(TAB_ACTIVE_ID!==containerId){document.querySelectorAll('.tcell.tcol,.tcell.tcur').forEach(c=>c.classList.remove('tcol','tcur'));TAB_ACTIVE_ID=containerId;}
+    // Block paste: Ctrl/Cmd+Shift+Alt+V → insert clipboard tablature at the cursor,
+    // distributing each line to its matching string (does NOT replace the whole block).
+    if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.altKey&&(e.key==='v'||e.key==='V'||e.code==='KeyV')){
+      TAB_INSERT_PASTE=containerId;
+      if(navigator.clipboard&&navigator.clipboard.readText){
+        e.preventDefault();
+        navigator.clipboard.readText().then(t=>{tabInsertBlockAtCursor(containerId,t);TAB_INSERT_PASTE=null;}).catch(()=>{/* read blocked (e.g. file://) — native paste will read the flag */});
+      }
+      return; // if the clipboard API is unavailable, let the native paste fire and use the flag
+    }
+    // Whole-column ops: Ctrl/Cmd+Enter = insert column · Ctrl/Cmd+Backspace = delete column
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();tabInsertColumn(containerId);return;}
+    if((e.ctrlKey||e.metaKey)&&e.key==='Backspace'){e.preventDefault();tabRemoveColumn(containerId);return;}
     const grid=getTabGridFromBlock(ci,bi,type);
     let cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:grid.cols.length-1;
     const labels=grid.labels;
-    if(e.key==='ArrowLeft'){e.preventDefault();cur=clamp(cur-1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur};markCursor(el,cur);return;}
-    if(e.key==='ArrowRight'){e.preventDefault();cur=clamp(cur+1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur};markCursor(el,cur);return;}
+    if(e.key==='ArrowLeft'){e.preventDefault();const _l=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||el.dataset.activeLab;cur=clamp(cur-1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur,lab:_l};markCursor(el,cur,_l);return;}
+    if(e.key==='ArrowRight'){e.preventDefault();const _l=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||el.dataset.activeLab;cur=clamp(cur+1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur,lab:_l};markCursor(el,cur,_l);return;}
+    // ArrowUp / ArrowDown move between strings; at the top/bottom string, fall through to default (scroll).
+    if(e.key==='ArrowUp'){const _l=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||el.dataset.activeLab||labels[labels.length-1];const idx=labels.indexOf(_l);if(idx>0){e.preventDefault();const nl=labels[idx-1];el.dataset.activeLab=nl;TAB_CURSOR[containerId]={col:cur,lab:nl};markCursor(el,cur,nl);}return;}
+    if(e.key==='ArrowDown'){const _l=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||el.dataset.activeLab||labels[0];const idx=labels.indexOf(_l);if(idx<labels.length-1){e.preventDefault();const nl=labels[idx+1];el.dataset.activeLab=nl;TAB_CURSOR[containerId]={col:cur,lab:nl};markCursor(el,cur,nl);}return;}
+    // '-' = leave this cell empty and advance the cursor (quick skip)
+    if(e.key==='-'){e.preventDefault();const _l=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||el.dataset.activeLab;if(_l){for(let x=grid.cols.length-1;x>cur;x--)grid.cols[x][_l]=grid.cols[x-1][_l];grid.cols[cur][_l]='-';saveTabGrid(ci,bi,grid)}cur=clamp(cur+1,0,grid.cols.length-1);TAB_CURSOR[containerId]={col:cur,lab:_l};refreshTabEditor(containerId);return;}
     // typing a fret number / technique char: write into the cell on the active string.
     if(/^[0-9xXhHpPbB/\\~().*]$/.test(e.key)){
       e.preventDefault();
-      const lab=el.dataset.activeLab||labels[labels.length-1];
+      const lab=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||el.dataset.activeLab||labels[labels.length-1];
       if(grid.cols[cur]){grid.cols[cur][lab]=e.key;saveTabGrid(ci,bi,grid)}
       // advance cursor but never past the last column (columns are fixed by bars)
-      TAB_CURSOR[containerId]={col:clamp(cur+1,0,grid.cols.length-1)};
+      TAB_CURSOR[containerId]={col:clamp(cur+1,0,grid.cols.length-1),lab};
       refreshTabEditor(containerId);
       return;
     }
     if(e.key==='Backspace'){
       e.preventDefault();
-      const lab=el.dataset.activeLab||labels[labels.length-1];
-      if(grid.cols[cur]) grid.cols[cur][lab]='-';
-      saveTabGrid(ci,bi,grid);
-      // step back so repeated backspace clears leftward
-      TAB_CURSOR[containerId]={col:clamp(cur-1,0,grid.cols.length-1)};
+      const lab=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||el.dataset.activeLab||labels[labels.length-1];
+      const t=cur>0?cur-1:0; // delete the cell before the cursor (text-editor style)
+      if(lab){
+        // remove cell at t on this string and pull the content ahead (to the right) backward
+        for(let x=t;x<grid.cols.length-1;x++) grid.cols[x][lab]=grid.cols[x+1][lab];
+        grid.cols[grid.cols.length-1][lab]='-';
+        saveTabGrid(ci,bi,grid);
+      }
+      TAB_CURSOR[containerId]={col:t,lab};
       refreshTabEditor(containerId);
       return;
     }
@@ -757,9 +842,53 @@ function bindTabEditor(containerId){
   el.addEventListener('paste',e=>tabPaste(e,containerId));
 }
 
-function markCursor(el,col){
-  el.querySelectorAll('.tcell.tcur').forEach(c=>c.classList.remove('tcur'));
-  el.querySelectorAll(`.tcell[data-col="${col}"]`).forEach(c=>c.classList.add('tcur'));
+function markCursor(el,col,lab){
+  el.querySelectorAll('.tcell.tcur,.tcell.tcol').forEach(c=>c.classList.remove('tcur','tcol'));
+  if(lab==null){const cid=el.id;lab=(TAB_CURSOR[cid]&&TAB_CURSOR[cid].lab)||el.dataset.activeLab;}
+  // Exact JS comparison (case-sensitive) — attribute selectors treat 'e'/'E' strings as equal.
+  el.querySelectorAll('.tcell').forEach(c=>{
+    if(parseInt(c.dataset.col)===col){
+      c.classList.add('tcol');
+      if(lab!=null&&c.dataset.lab===lab) c.classList.add('tcur');
+    }
+  });
+}
+
+/* Insert a whole tablature block at the cursor column, mapping each pasted line to its
+   corresponding string (by position when the line count matches the channel's strings,
+   otherwise by string name). Overwrites cells from the cursor rightward; the column count
+   stays fixed by bars. Returns false if the text isn't a recognisable tab block so the
+   caller can fall back to the replace behaviour. */
+function tabInsertBlockAtCursor(containerId,text){
+  const el=document.getElementById(containerId); if(!el)return false;
+  const ci=el.dataset.ci,bi=el.dataset.bi,type=el.dataset.type;
+  const labels=tabStringSet(type);
+  const raw=(text||'').replace(/\r\n/g,'\n').split('\n');
+  const lines=[];
+  raw.forEach(l=>{const m=l.match(/^\s*([A-Ga-g][#b]?)\s*\|(.*)$/);if(m)lines.push({label:m[1],body:m[2].replace(/\|+\s*$/,'')})});
+  if(!lines.length)return false;
+  const bodyByLabel={};
+  if(lines.length===labels.length){labels.forEach((lab,i)=>{bodyByLabel[lab]=lines[i].body});}
+  else{lines.forEach(o=>{const lab=labels.find(L=>L.toLowerCase()===o.label.toLowerCase());if(lab&&bodyByLabel[lab]==null)bodyByLabel[lab]=o.body});}
+  const width=Math.max(0,...labels.map(l=>(bodyByLabel[l]||'').length));
+  if(!width)return false;
+  const grid=getTabGridFromBlock(ci,bi,type);
+  const cur=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].col!=null)?TAB_CURSOR[containerId].col:0;
+  for(let k=0;k<width;k++){
+    const col=cur+k; if(col>=grid.cols.length)break;
+    labels.forEach(lab=>{
+      const body=bodyByLabel[lab];
+      if(body==null)return;                 // string absent from the pasted block → keep existing
+      const ch=body[k];
+      grid.cols[col][lab]=(ch&&ch!==' '&&ch!=='|')?ch:'-';
+    });
+  }
+  saveTabGrid(ci,bi,grid);
+  const lab=(TAB_CURSOR[containerId]&&TAB_CURSOR[containerId].lab)||labels[labels.length-1];
+  TAB_CURSOR[containerId]={col:clamp(cur+width,0,grid.cols.length-1),lab};
+  TAB_ACTIVE_ID=containerId;
+  refreshTabEditor(containerId);
+  return true;
 }
 
 /* Paste: normalise into the grid, never breaking structure. */
@@ -769,6 +898,11 @@ function tabPaste(e,containerId){
   const text=(e.clipboardData||window.clipboardData).getData('text');
   if(!text)return;
   e.preventDefault();
+  if(TAB_INSERT_PASTE===containerId){
+    TAB_INSERT_PASTE=null;
+    if(tabInsertBlockAtCursor(containerId,text))return; // inserted per string at the cursor
+    // not a tab block → fall through to the replace behaviour below
+  }
   const norm=normalizeTabText(text,type);
   const b=STATE.song.blocks.find(x=>x.id===bi);
   if(!b.content[ci])b.content[ci]={};

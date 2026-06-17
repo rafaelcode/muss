@@ -43,14 +43,20 @@ function chordProToBlocks(text){
   for(const line of lines){
     const mMeta=line.match(/^\{(\w+):\s*(.*)\}\s*$/);
     if(mMeta){meta[mMeta[1].toLowerCase()]=mMeta[2].trim();continue}
-    // Section header: a lone [NAME] or [NAME x9]; must be a single bracket pair (no inner "][").
+    // Section header: a lone [NAME] or [NAME x9]; single bracket pair (no inner "][").
+    // Only treat as a section if it carries an explicit xN bar count OR the name is a
+    // known section keyword — otherwise a lone chord like [E] would become a phantom block.
     const mSec=line.match(/^\[([^\]\[]+?)\]\s*$/);
     if(mSec && !/\]\s*\[/.test(line)){
       const inner=mSec[1].trim();
       const xm=inner.match(/^(.*?)\s*x\s*(\d+)\s*$/i);
       const name=(xm?xm[1]:inner).trim();
-      cur={section:name.toUpperCase(),bars:xm?parseInt(xm[2]):null,lines:[]};
-      blocks.push(cur);continue;
+      const isSection=!!xm || (typeof SECTION_OPTIONS!=='undefined' && SECTION_OPTIONS.indexOf(name.toUpperCase())>=0);
+      if(isSection){
+        cur={section:name.toUpperCase(),bars:xm?parseInt(xm[2]):null,lines:[]};
+        blocks.push(cur);continue;
+      }
+      // else: fall through — it's a chord-only line, keep it as content
     }
     if(line.trim()===''){continue}        // blank lines are separators (headers delimit blocks)
     if(!cur){cur={section:'VERSE',bars:null,lines:[]};blocks.push(cur)}
@@ -120,21 +126,73 @@ function rdGetLines(b){return blockToChordProLines(b).split('\n')}
 
 /* Move a chord to a new char index (within the SAME block; lines may differ).
    Only edits block.chordpro — beats (content.rhythm.chords) are NOT touched. */
+/* Move a chord to the exact drop-cursor position (same block, any line).
+   The chord lands where the drop cursor was; chords in a line are kept sorted
+   by position (left→right), so the reading order follows the placement.
+   Edits only block.chordpro; beats are untouched. */
+/* Keep chords in a line strictly ordered (no overlap). The dragged chord stays
+   in its slot; chords AHEAD of it are pushed forward so they "run with it" and a
+   chord can never pass a neighbour. gap = previous chord's name length + 1 space. */
+function rdEnforceOrder(chords,k){
+  const gap=c=>Math.max(1,((c&&c.name?c.name.length:1)+1));
+  if(chords[k].pos<0)chords[k].pos=0;
+  if(k>0){const minp=chords[k-1].pos+gap(chords[k-1]); if(chords[k].pos<minp)chords[k].pos=minp;}  // can't pass left neighbour
+  for(let i=k+1;i<chords.length;i++){               // push the ones ahead forward
+    const minp=chords[i-1].pos+gap(chords[i-1]);
+    if(chords[i].pos<minp)chords[i].pos=minp;
+  }
+}
+/* Build a ChordPro line WITHOUT re-sorting — preserves the sequence order. */
+function rdBuildLineKeepOrder(stripped,chords){
+  const maxPos=chords.reduce((m,c)=>Math.max(m,c.pos),0);
+  if(maxPos>stripped.length) stripped=stripped.padEnd(maxPos,' ');
+  let out='',last=0;
+  for(const c of chords){                            // already ordered; never step backwards
+    const p=Math.max(last,Math.min(stripped.length,Math.max(0,c.pos)));
+    out+=stripped.slice(last,p)+`[${c.name}]`;last=p;
+  }
+  out+=stripped.slice(last);
+  return out;
+}
+/* Light refresh after a chord move: re-render only the lead sheet (and sync the
+   ChordPro textarea if present) instead of the whole reading view. */
+function rdRefreshSheet(){
+  const sheet=document.querySelector('.rd-sheet');
+  if(!sheet){renderReading();return;}
+  sheet.innerHTML=renderLeadSheet();
+  const ta=document.querySelector('#rdSource'); if(ta) ta.value=songToChordPro();
+  requestAnimationFrame(()=>{bindReadingDnD();rdFixOverlaps()});
+}
+
+/* Move a chord to a new char index (same block; lines may differ). Order is
+   preserved: within a line the chord keeps its slot and pushes the ones ahead;
+   across lines it is inserted at the ordered slot. Only edits block.chordpro. */
 function rdMoveChord(srcBid,srcLi,ci,dstBid,dstLi,newPos){
-  if(srcBid!==dstBid)return;                       // keep moves inside one block
+  if(srcBid!==dstBid)return;                         // keep moves inside one block
   const b=rdBlockById(srcBid);if(!b)return;
   const lines=rdGetLines(b);
   if(srcLi<0||srcLi>=lines.length||dstLi<0||dstLi>=lines.length)return;
-  const src=rdParseLine(lines[srcLi]);
-  if(ci<0||ci>=src.chords.length)return;
-  const [moved]=src.chords.splice(ci,1);
-  lines[srcLi]=rdBuildLine(src.stripped,src.chords);
-  const dst=rdParseLine(lines[dstLi]);
-  moved.pos=Math.max(0,newPos);    // don't clamp to text length — rdBuildLine pads with spaces
-  dst.chords.push(moved);
-  lines[dstLi]=rdBuildLine(dst.stripped,dst.chords);
-  b.chordpro=lines.join('\n');                     // persist position with the lyric
-  renderReading();
+  newPos=Math.max(0,newPos);
+  if(srcLi===dstLi){
+    const ln=rdParseLine(lines[srcLi]);
+    if(ci<0||ci>=ln.chords.length)return;
+    ln.chords[ci].pos=newPos;                        // keep its sequence slot — never reorder
+    rdEnforceOrder(ln.chords,ci);                    // ones ahead run with it; can't pass a neighbour
+    lines[srcLi]=rdBuildLineKeepOrder(ln.stripped,ln.chords);
+  }else{
+    const s=rdParseLine(lines[srcLi]);
+    if(ci<0||ci>=s.chords.length)return;
+    const [moved]=s.chords.splice(ci,1);
+    lines[srcLi]=rdBuildLineKeepOrder(s.stripped,s.chords);
+    const d=rdParseLine(lines[dstLi]);
+    moved.pos=newPos;
+    let k=d.chords.findIndex(c=>c.pos>newPos); if(k<0)k=d.chords.length;
+    d.chords.splice(k,0,moved);                       // slot in by position (ordered)
+    rdEnforceOrder(d.chords,k);
+    lines[dstLi]=rdBuildLineKeepOrder(d.stripped,d.chords);
+  }
+  b.chordpro=lines.join('\n');                        // persist position with the lyric
+  rdRefreshSheet();
 }
 
 /* Inline lyric edit: save new text to the block (chordpro), keep chord
@@ -166,15 +224,16 @@ function rdSplitLineAt(bid,li,charPos){
 }
 
 /* ── Lead-sheet preview (chords draggable + lyric editable inline) ── */
-function rdLineHTML(line,bid,li){
+function rdLineHTML(line,bid,li,beatsList,gStart){
   const {stripped,chords}=rdParseLine(line);
   const len=stripped.length;
-  const chordRow=chords.map((c,ci)=>`<span class="rd-chord" draggable="true" data-bid="${bid}" data-li="${li}" data-ci="${ci}" style="left:${c.pos}ch" title="Arrastrá para ubicar sobre la sílaba"><span class="rd-chord-nm">${escapeHTML(c.name)}</span></span>`).join('');
+  const bof=i=>(beatsList&&beatsList[i]!=null)?beatsList[i]:sigBeats();
+  const chordRow=chords.map((c,ci)=>`<span class="rd-chord" data-bid="${bid}" data-li="${li}" data-ci="${ci}" style="left:${c.pos}ch" title="Arrastrá a la línea anterior/siguiente (respeta el orden)"><span class="rd-chord-nm">${escapeHTML(c.name)}</span></span>`).join('');
   const txt=len?escapeHTML(stripped):'&nbsp;';
   const noLy=!stripped.trim();
   if(noLy){
     // Card-style flex row for chord-only lines (no text shown)
-    const cardRow=chords.map((c,ci)=>`<span class="rd-chord rd-card" draggable="true" data-bid="${bid}" data-li="${li}" data-ci="${ci}" title="Arrastrá para mover entre filas"><span class="rd-chord-nm">${escapeHTML(c.name)}</span></span>`).join('');
+    const cardRow=chords.map((c,ci)=>`<span class="rd-chord rd-card" data-bid="${bid}" data-li="${li}" data-ci="${ci}" title="Arrastrá a la línea anterior/siguiente (respeta el orden)"><span class="rd-chord-nm">${escapeHTML(c.name)}</span></span>`).join('');
     return`<div class="rd-line no-lyrics" data-bid="${bid}" data-li="${li}" data-len="${len}"><div class="rd-chordrow cards">${cardRow}</div></div>`;
   }
   return`<div class="rd-line" data-bid="${bid}" data-li="${li}" data-len="${len}"><div class="rd-chordrow">${chordRow}</div><div class="rd-text" contenteditable="true" spellcheck="false" onkeydown="if(event.key==='Enter'){event.preventDefault();const s=window.getSelection();const p=s.rangeCount?s.getRangeAt(0).startOffset:0;rdSplitLineAt('${bid}',${li},p)}" onblur="rdEditLine('${bid}',${li},this.textContent)">${txt}</div></div>`;
@@ -186,10 +245,14 @@ function renderLeadSheet(){
   s.blocks.forEach(b=>{
     const beats=b.bars*sigBeats(),dur=beats*spb,start=t;if(b.enabled)t+=dur;
     const src=blockToChordProLines(b);
+    const rh=STATE.song.channels.find(c=>c.type==='rhythm');
+    const beatsList=rh?getChords(b,rh.id).map(c=>c.beats||sigBeats()):[];
+    let g=0;
+    const body=src.split('\n').map((ln,li)=>{const h=rdLineHTML(ln,b.id,li,beatsList,g);g+=rdParseLine(ln).chords.length;return h}).join('');
     html+=`<div class="rd-block${b.enabled?'':' muted'}">`+
       `<div class="rd-sec"><span class="rd-sec-tag" style="background:${SECTION_COLORS[b.section]||'#888'}">${escapeHTML(b.section)}</span>`+
       `<span class="rd-sec-meta">${b.bars} bars · ${fmtTime(start)}–${fmtTime(start+dur)}</span></div>`+
-      src.split('\n').map((ln,li)=>rdLineHTML(ln,b.id,li)).join('')+
+      body+
     `</div>`;
   });
   return html;
@@ -199,101 +262,142 @@ function renderLeadSheet(){
    While dragging, a floating preview (.rd-drag-preview) snaps over the line
    and to the nearest character so you can see exactly where the chord will
    land. The contenteditable lyric is never modified by the drop. */
-let _rdDrag=null;
-let _rdPreview=null;
-let _rdGlobalBound=false;
+let _rdDrag=null;        // {bid,li,ci,name,pointerId,startX,startY,el,active,dropLine,dropIdx}
+let _rdPreview=null;     // floating chord label (position:fixed)
+let _rdCursor=null;      // single persistent drop-cursor overlay (fixed, never inside the sheet)
+let _rdRaf=null;         // rAF throttle for pointermove
+let _rdLast=null;        // last pointer {x,y}
+let _rdLineCache=null;   // Map<lineEl,{rect,len}> cached during a drag (sheet not mutated → rects valid)
+const RD_DRAG_THRESHOLD=4;   // px of movement before a press becomes a drag (so a plain click still works)
 
-function rdRemovePreview(){if(_rdPreview&&_rdPreview.parentNode)_rdPreview.parentNode.removeChild(_rdPreview);_rdPreview=null;document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove())}
+function rdEnsureCursor(){
+  if(_rdCursor&&_rdCursor.parentNode)return _rdCursor;
+  _rdCursor=document.createElement('div');
+  _rdCursor.className='rd-drop-cursor fixed';
+  _rdCursor.style.display='none';
+  document.body.appendChild(_rdCursor);
+  return _rdCursor;
+}
+function rdRemovePreview(){
+  if(_rdRaf!=null){cancelAnimationFrame(_rdRaf);_rdRaf=null}
+  if(_rdPreview&&_rdPreview.parentNode)_rdPreview.parentNode.removeChild(_rdPreview);
+  _rdPreview=null;
+  if(_rdCursor)_rdCursor.style.display='none';
+  _rdLineCache=null;_rdLast=null;
+}
 
+let _rdCw=0;
+function rdChWidth(){
+  if(_rdCw)return _rdCw;
+  const host=document.querySelector('.rd-sheet')||document.body;
+  const t=document.createElement('span');
+  t.style.cssText='position:absolute;visibility:hidden;font-family:\'JetBrains Mono\',monospace;font-size:13px;white-space:pre';
+  t.textContent='0000000000';host.appendChild(t);
+  const w=t.getBoundingClientRect().width/10;t.remove();_rdCw=w||8;return _rdCw;
+}
 function rdCharIdx(line,clientX){
   const txt=line.querySelector('.rd-text');
   const crow=line.querySelector('.rd-chordrow');
-  // For chord-only lines (len=0 / text collapsed), use the chordrow or line as reference.
   const ref=txt&&txt.getBoundingClientRect().width>2?txt:(crow||line);
   const rect=ref.getBoundingClientRect();
   const len=parseInt(line.dataset.len)||0;
-  const cw=len>0?rect.width/len:8;         // 8px ≈ 1ch fallback for empty lines
+  const cw=rdChWidth();
   let idx=Math.round((clientX-rect.left)/cw);
-  return {idx:Math.max(0,idx),rect,cw,len};  // no upper clamp — rdBuildLine pads
+  return {idx:Math.max(0,idx),rect,cw,len};
 }
 
-function rdGlobalDragOver(e){
-  if(!_rdDrag||!_rdPreview)return;
-  // free-follow by default
-  _rdPreview.style.left=e.clientX+'px';
-  _rdPreview.style.top=(e.clientY-22)+'px';
+/* ── Chord dragging via Pointer Events ───────────────────────────────
+   Lighter and smoother than the native HTML5 Drag-and-Drop API: no
+   browser ghost image, no interference with the contenteditable lyric,
+   and full control over throttling. The sheet is never mutated while
+   dragging (the drop cursor is a fixed overlay), so the multi-column
+   layout is not reflowed per move.
+   ──────────────────────────────────────────────────────────────────── */
+function rdDragFrame(){
+  _rdRaf=null;
+  if(!_rdDrag||!_rdDrag.active||!_rdPreview||!_rdLast)return;
+  const x=_rdLast.x,y=_rdLast.y;
+  _rdPreview.style.transform=`translate(${x}px,${y-22}px)`;
   _rdPreview.classList.remove('snapped');
-  // if hovering a line of the same block, snap to that line + nearest char
-  const line=e.target.closest&&e.target.closest('.rd-line');
-  if(line && line.dataset.bid===_rdDrag.bid){
-    const txtEl=line.querySelector('.rd-text');
-    if(txtEl){
-      const r=txtEl.getBoundingClientRect();
-      const {idx,cw}=rdCharIdx(line,e.clientX);
-      _rdPreview.style.left=(r.left+idx*cw)+'px';
-      _rdPreview.style.top=(r.top-20)+'px';
-      _rdPreview.classList.add('snapped');
-      // Show drop cursor marker at the exact character position
-      document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove());
-      const cr=document.createElement('div');cr.className='rd-drop-cursor';
-      const lr=line.getBoundingClientRect();
-      cr.style.left=(r.left+idx*cw-lr.left)+'px';
-      line.appendChild(cr);
-    } else {
-      document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove());
+  const cur=rdEnsureCursor();
+  const under=document.elementFromPoint(x,y);
+  const line=under&&under.closest&&under.closest('.rd-line');
+  if(line&&line.dataset.bid===_rdDrag.bid){
+    let geo=_rdLineCache.get(line);
+    if(!geo){
+      const txtEl=line.querySelector('.rd-text');
+      const ref=(txtEl&&txtEl.getBoundingClientRect().width>2)?txtEl:(line.querySelector('.rd-chordrow')||line);
+      geo={rect:ref.getBoundingClientRect(),len:parseInt(line.dataset.len)||0};
+      _rdLineCache.set(line,geo);
     }
-  } else {
-    document.querySelectorAll('.rd-drop-cursor').forEach(m=>m.remove());
+    const cw=rdChWidth();
+    const idx=Math.max(0,Math.round((x-geo.rect.left)/cw));
+    const px=geo.rect.left+idx*cw;
+    _rdPreview.style.transform=`translate(${px}px,${geo.rect.top-20}px)`;
+    _rdPreview.classList.add('snapped');
+    cur.style.display='block';
+    cur.style.height=geo.rect.height+'px';
+    cur.style.transform=`translate(${px}px,${geo.rect.top}px)`;
+    _rdDrag.dropLine=line;_rdDrag.dropIdx=idx;
+  }else{
+    cur.style.display='none';
+    _rdDrag.dropLine=null;
   }
 }
 
+function rdPointerMove(e){
+  if(!_rdDrag)return;
+  if(!_rdDrag.active){
+    if(Math.abs(e.clientX-_rdDrag.startX)+Math.abs(e.clientY-_rdDrag.startY)<RD_DRAG_THRESHOLD)return;
+    _rdDrag.active=true;                              // promote press → drag
+    _rdDrag.el.classList.add('dragging');
+    _rdPreview=document.createElement('div');
+    _rdPreview.className='rd-drag-preview';
+    _rdPreview.textContent=_rdDrag.name;
+    _rdPreview.style.transform=`translate(${e.clientX}px,${e.clientY-22}px)`;
+    document.body.appendChild(_rdPreview);
+    _rdLineCache=new Map();
+    rdEnsureCursor();
+  }
+  _rdLast={x:e.clientX,y:e.clientY};
+  if(_rdRaf==null)_rdRaf=requestAnimationFrame(rdDragFrame);
+}
+
+function rdPointerUp(e){
+  const d=_rdDrag;if(!d)return;
+  try{d.el.releasePointerCapture&&d.el.releasePointerCapture(d.pointerId)}catch(_){}
+  d.el.removeEventListener('pointermove',rdPointerMove);
+  d.el.removeEventListener('pointerup',rdPointerUp);
+  d.el.removeEventListener('pointercancel',rdPointerUp);
+  if(!d.active){_rdDrag=null;return}                 // it was a click, not a drag
+  let line=d.dropLine,idx=d.dropIdx;
+  if(!line){                                         // fallback hit-test on release
+    const under=document.elementFromPoint(e.clientX,e.clientY);
+    const l=under&&under.closest&&under.closest('.rd-line');
+    if(l&&l.dataset.bid===d.bid){line=l;idx=rdCharIdx(l,e.clientX).idx;}
+  }
+  d.el.classList.remove('dragging');
+  rdRemovePreview();
+  _rdDrag=null;
+  if(line) rdMoveChord(d.bid,d.li,d.ci,line.dataset.bid,parseInt(line.dataset.li),idx);
+}
+
+function rdPointerDown(e){
+  if(e.button!=null&&e.button!==0)return;            // primary button only
+  const ch=e.currentTarget;
+  e.preventDefault();                                // no text selection / focus steal / native drag
+  _rdDrag={bid:ch.dataset.bid,li:parseInt(ch.dataset.li),ci:parseInt(ch.dataset.ci),
+           name:ch.textContent.trim(),pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,
+           el:ch,active:false,dropLine:null,dropIdx:0};
+  try{ch.setPointerCapture(e.pointerId)}catch(_){}
+  ch.addEventListener('pointermove',rdPointerMove);
+  ch.addEventListener('pointerup',rdPointerUp);
+  ch.addEventListener('pointercancel',rdPointerUp);
+}
+
 function bindReadingDnD(){
-  // chord sources
   document.querySelectorAll('.rd-chord').forEach(ch=>{
-    ch.addEventListener('dragstart',e=>{
-      _rdDrag={bid:ch.dataset.bid,li:parseInt(ch.dataset.li),ci:parseInt(ch.dataset.ci),name:ch.textContent.trim()};
-      e.dataTransfer.effectAllowed='move';
-      // empty payload + custom mime → browser has no text to insert into contenteditable
-      try{e.dataTransfer.setData('application/x-muss-chord','1')}catch(_){}
-      try{e.dataTransfer.setData('text/plain','')}catch(_){}
-      // hide the ugly native drag image
-      try{const ghost=document.createElement('canvas');ghost.width=1;ghost.height=1;e.dataTransfer.setDragImage(ghost,0,0)}catch(_){}
-      // build our floating preview
-      rdRemovePreview();
-      _rdPreview=document.createElement('div');
-      _rdPreview.className='rd-drag-preview';
-      _rdPreview.textContent=_rdDrag.name;
-      _rdPreview.style.left=e.clientX+'px';
-      _rdPreview.style.top=(e.clientY-22)+'px';
-      document.body.appendChild(_rdPreview);
-      ch.classList.add('dragging');
-    });
-    ch.addEventListener('dragend',()=>{ch.classList.remove('dragging');rdRemovePreview();_rdDrag=null});
-  });
-  // global dragover (registered once) — moves the preview, snaps to line/char
-  if(!_rdGlobalBound){document.addEventListener('dragover',rdGlobalDragOver,true);_rdGlobalBound=true}
-  // line drop targets
-  document.querySelectorAll('.rd-line').forEach(line=>{
-    // dragover on the line AND on its editable text → preventDefault so the drop fires here
-    const onOver=e=>{if(_rdDrag&&_rdDrag.bid===line.dataset.bid){e.preventDefault();line.classList.add('rd-drop')}};
-    line.addEventListener('dragover',onOver);
-    const txt=line.querySelector('.rd-text');
-    if(txt){
-      txt.addEventListener('dragover',onOver);
-      // ALSO swallow drop on the contenteditable so the browser never inserts text
-      txt.addEventListener('drop',e=>{if(_rdDrag&&_rdDrag.bid===line.dataset.bid){e.preventDefault()}});   // prevent native text-insert, let .rd-line handle the move
-    }
-    line.addEventListener('dragleave',()=>line.classList.remove('rd-drop'));
-    line.addEventListener('drop',e=>{
-      e.preventDefault();e.stopPropagation();             // block default text insertion
-      line.classList.remove('rd-drop');
-      if(!_rdDrag||_rdDrag.bid!==line.dataset.bid){rdRemovePreview();_rdDrag=null;return}
-      const {idx}=rdCharIdx(line,e.clientX);
-      const ref={...{_:1}};
-      const src=_rdDrag;
-      rdRemovePreview();_rdDrag=null;
-      rdMoveChord(src.bid,src.li,src.ci,line.dataset.bid,parseInt(line.dataset.li),idx);
-    });
+    ch.addEventListener('pointerdown',rdPointerDown);
   });
 }
 
@@ -303,26 +407,66 @@ function rdToggleChords(){
   renderReading();
 }
 
+function rdSetTab(tab){ STATE.ui.rdTab=tab; renderReading(); }
+
 function renderReading(){
-  const _sc=STATE.ui.rdShowChords!==false;
+  const tab = STATE.ui.rdTab || 'leadsheet';      // 'leadsheet' | 'chordpro' | 'both'
+  const _sc = STATE.ui.rdShowChords!==false;
+  const tabLabel = tab==='chordpro' ? 'CHORD PRO' : (tab==='both' ? 'LEADSHEET + CHORD PRO' : 'LEADSHEET');
   $('#editorHead').innerHTML=
-    `<div class="editor-title"><span class="editor-title-tag" style="background:var(--accent-bg);color:var(--accent)">Lectura</span><h2>${escapeHTML(STATE.song.title)||'Untitled'}</h2></div>`+
+    `<div class="editor-title"><span class="editor-title-tag" style="background:var(--accent-bg);color:var(--accent)">${tabLabel}</span><h2>${escapeHTML(STATE.song.title)||'Untitled'}</h2></div>`+
     `<div style="display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:var(--ink-faint)">${STATE.song.bpm} bpm · ${escapeHTML(STATE.song.signature)} · ${fmtTime(totalDur())}</span></div>`;
   const cv=$('#canvas');cv.className='canvas';cv.style.cssText='';
-  cv.innerHTML=
-    `<div class="rd-wrap">
-      <div class="rd-sheet${_sc?'':' rd-no-chords'}">${renderLeadSheet()}</div>
-      <div class="rd-editor">
-        <div class="rd-ed-head"><span><b>Editor</b> — arrastrá los <code>[acordes]</code> sobre la sílaba · clic en la letra para editar (los tiempos no cambian)</span>
+  // Uniform line width = longest line in the whole song + 2 tab stops (8 ch), so chords
+  // can be dragged anywhere across every line (not just up to each line's own length).
+  let _maxLen=0;
+  STATE.song.blocks.forEach(b=>blockToChordProLines(b).split('\n').forEach(ln=>{_maxLen=Math.max(_maxLen,rdParseLine(ln).stripped.length)}));
+  const _lw=_maxLen+8;
+
+  const sheetHTML = `<div class="rd-sheet${_sc?'':' rd-no-chords'}" style="--rd-lw:${_lw}ch">${renderLeadSheet()}</div>`;
+  const editorHTML = `<div class="rd-editor">
+        <div class="rd-ed-head"><span><b>ChordPro</b> — <code>[SECCIÓN x8]</code> inicia bloque · <code>[D]</code> coloca un acorde · línea en blanco separa bloques</span>
           <div class="rd-ed-actions">
-            <button class="${_sc?'rd-chord-toggle on':'rd-chord-toggle'}" onclick="rdToggleChords()" title="Mostrar/ocultar acordes">♫ Acordes</button>
             <button onclick="regenChordPro()" title="Reconstruir desde los canales">↻ Regenerar</button>
             <button class="primary" onclick="saveChordProFromEditor()">Guardar</button>
           </div>
         </div>
         <textarea id="rdSource" spellcheck="false">${escapeHTML(songToChordPro())}</textarea>
-        <div class="rd-ed-hint">Formato: <code>[SECCIÓN x8]</code> inicia un bloque de 8 compases · <code>[D]</code> coloca un acorde en ese punto del texto · línea en blanco separa bloques.</div>
+        <div class="rd-ed-hint">Editá el ChordPro y pulsá <b>Guardar</b> para aplicar. En <b>LEADSHEET</b> arrastrá los <code>[acordes]</code> sobre la sílaba (los tiempos no cambian).</div>
+      </div>`;
+
+  const tabsBar = `<div class="rd-tabs">
+      <div class="rd-tab-group">
+        <button class="rd-tab${tab==='leadsheet'?' active':''}" onclick="rdSetTab('leadsheet')">LEADSHEET</button>
+        <button class="rd-tab${tab==='chordpro'?' active':''}" onclick="rdSetTab('chordpro')">CHORD PRO</button>
+        <button class="rd-tab${tab==='both'?' active':''}" onclick="rdSetTab('both')" title="Mostrar ambos, mitad y mitad">▥ Ambos</button>
       </div>
+      ${tab!=='chordpro'?`<button class="${_sc?'rd-chord-toggle on':'rd-chord-toggle'}" onclick="rdToggleChords()" title="Mostrar/ocultar acordes">♫ Acordes</button>`:''}
     </div>`;
-  requestAnimationFrame(bindReadingDnD);
+
+  const body = (tab==='leadsheet') ? sheetHTML
+             : (tab==='chordpro')  ? editorHTML
+             : sheetHTML + editorHTML;
+
+  cv.innerHTML = tabsBar + `<div class="rd-wrap ${tab==='both'?'split':'solo'}">${body}</div>`;
+
+  requestAnimationFrame(()=>{ if(tab!=='chordpro'){ bindReadingDnD(); rdFixOverlaps(); } });
+}
+
+/* Prevent over-lyric chord cards from overlapping: walk each row left→right and
+   nudge any card that would collide with the previous one. Visual only — the
+   stored char position (used for drag/drop) is untouched. */
+function rdFixOverlaps(){
+  document.querySelectorAll('.rd-chordrow:not(.cards)').forEach(row=>{
+    const cards=[...row.querySelectorAll('.rd-chord')];
+    if(cards.length<2)return;
+    const items=cards.map(c=>({el:c,left:c.offsetLeft,w:c.offsetWidth})).sort((a,b)=>a.left-b.left);
+    let prevRight=-Infinity;const gap=4;
+    items.forEach(it=>{
+      let left=it.left;
+      if(left<prevRight+gap) left=prevRight+gap;
+      it.el.style.left=left+'px';
+      prevRight=left+(it.w||0);
+    });
+  });
 }

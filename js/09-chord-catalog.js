@@ -428,3 +428,101 @@ function ccPickerApply(chordId){
   renderEditor();
 }
 function ccClosePicker(){CC_UI.picker=false;CC_UI.pickerCtx=null;renderEditor()}
+/* Render a chord as a compact guitar tablature voicing (high-e to low-E), used by
+   the Resumen "Visor de acordes". Frets are stored [low-E,A,D,G,B,high-E]; -1=mute, 0=open. */
+function chordTabHTML(name){
+  if(typeof ccEnsure==='function') ccEnsure();
+  const cat=(STATE.catalog&&STATE.catalog.chords)?STATE.catalog.chords:[];
+  const entry=cat.find(c=>c.name.toLowerCase()===String(name).toLowerCase());
+  const labels=['e','B','G','D','A','E'];   // display top→bottom
+  const order=[5,4,3,2,1,0];                // map labels → frets[] indices
+  if(!entry||!entry.voicings||!entry.voicings.length){
+    return `<div class="cv-chord cv-unknown"><div class="cv-name">${escapeHTML(String(name))}</div><div class="cv-na">sin forma</div></div>`;
+  }
+  const v=entry.voicings[0];
+  const rows=labels.map((lab,i)=>{
+    const f=v.frets[order[i]];
+    const cell=(f<0)?'x':String(f);
+    const cls=(f<0)?' mute':(f===0?' open':'');
+    return `<div class="cv-row${cls}"><span class="cv-lbl">${lab}</span><span class="cv-dash">|</span><span class="cv-fret">${cell}</span></div>`;
+  }).join('');
+  return `<div class="cv-chord" title="${escapeHTML(String(name))}${v.name?(' · '+escapeHTML(v.name)):''}"><div class="cv-name">${escapeHTML(String(name))}</div><div class="cv-tab">${rows}</div></div>`;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   DB-ready persistence representation (additive — does NOT change ccSave/ccLoad,
+   which keep using localStorage exactly as before). These helpers normalise the
+   in-memory catalog into a versioned, relational/document-friendly shape that a
+   future backend can store directly, and rebuild the nested in-memory shape back.
+
+   Normalised entities:
+     chords   : one row per chord       (notes/intervals as JSON arrays)
+     voicings : one row per voicing      (chord_id FK, frets/fingers/barre as JSON)
+   Envelope : { schema, version, exported_at, chords:[…], voicings:[…] }
+   ────────────────────────────────────────────────────────────────────────── */
+const CC_SCHEMA = 'muss.chord_catalog';
+const CC_SCHEMA_VERSION = 1;
+
+/* In-memory catalog → normalised records (ready to insert into two tables/collections). */
+function ccToRecords(){
+  if(typeof ccEnsure==='function') ccEnsure();
+  const chords=[], voicings=[];
+  ((STATE.catalog&&STATE.catalog.chords)||[]).forEach(c=>{
+    chords.push({
+      id: c.id,
+      name: c.name,
+      root: c.root||null,
+      quality: c.quality||'',
+      category: c.category||null,
+      notes: Array.isArray(c.notes)?c.notes.slice():[],
+      intervals: Array.isArray(c.intervals)?c.intervals.slice():[],
+      source: c.source||'user',
+    });
+    (c.voicings||[]).forEach((v,i)=>{
+      voicings.push({
+        id: v.id,
+        chord_id: c.id,
+        name: v.name||null,
+        instrument: v.instrument||'guitar-6',
+        frets: Array.isArray(v.frets)?v.frets.slice():[],
+        fingers: Array.isArray(v.fingers)?v.fingers.slice():[],
+        barre: v.barre||null,
+        position: v.position||0,
+        sort_order: i,
+      });
+    });
+  });
+  return { schema:CC_SCHEMA, version:CC_SCHEMA_VERSION, exported_at:new Date().toISOString(), chords, voicings };
+}
+
+/* Normalised records → nested in-memory catalog (inverse of ccToRecords). */
+function ccFromRecords(payload){
+  const chordRows=(payload&&payload.chords)||[];
+  const voicingRows=(payload&&payload.voicings)||[];
+  const byChord={};
+  voicingRows.slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).forEach(v=>{
+    (byChord[v.chord_id]=byChord[v.chord_id]||[]).push({
+      id: v.id,
+      name: v.name||'Voicing',
+      instrument: v.instrument||'guitar-6',
+      frets: Array.isArray(v.frets)?v.frets.slice():[],
+      fingers: Array.isArray(v.fingers)?v.fingers.slice():[],
+      barre: v.barre||null,
+      position: v.position||0,
+    });
+  });
+  return chordRows.map(c=>({
+    id: c.id,
+    name: c.name,
+    root: c.root,
+    quality: c.quality||'',
+    notes: Array.isArray(c.notes)?c.notes.slice():[],
+    intervals: Array.isArray(c.intervals)?c.intervals.slice():[],
+    category: c.category,
+    voicings: byChord[c.id]||[],
+    source: c.source||'user',
+  }));
+}
+
+/* Convenience: the persistence envelope as a JSON string (e.g. to POST to a backend). */
+function ccExportJSON(){ return JSON.stringify(ccToRecords()); }

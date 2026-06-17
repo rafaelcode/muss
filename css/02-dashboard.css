@@ -297,3 +297,82 @@ html,body{overflow:hidden}
 @media(max-width:900px){
   .lib-table .col-struct,.lib-table .col-chords,.lib-table .col-beats{display:none}
 }
+/* ── Dashboard tool: chord catalog ── */
+.chtool{display:flex;flex-direction:column;gap:14px}
+.chtool-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.chtool-search{flex:1 1 220px;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg-0);color:var(--ink);font-size:13px;font-family:'Inter',sans-serif}
+.chtool-search:focus{outline:none;border-color:var(--accent)}
+.chtool-cats{display:flex;gap:6px;flex-wrap:wrap}
+.chtool-cats button{padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg-0);
+  color:var(--ink-dim);font-size:11px;cursor:pointer;text-transform:capitalize;transition:all .12s}
+.chtool-cats button:hover{border-color:var(--accent);color:var(--accent)}
+.chtool-cats button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.chtool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.chtool-empty{padding:40px;text-align:center;color:var(--ink-faint);font-size:13px}
+.chcard{border:1px solid var(--line);border-radius:10px;background:var(--bg-0);padding:12px 10px;display:flex;flex-direction:column;gap:8px}
+.chcard-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.chcard-name{font-size:16px;font-weight:700;color:var(--accent)}
+.chcard-cat{font-size:9px;color:var(--ink-faint);text-transform:capitalize;letter-spacing:.03em}
+.chcard-body{display:flex;align-items:center;gap:10px;justify-content:center}
+.chcard-diag{flex-shrink:0}
+.chcard-diag svg{display:block}
+/* reuse the .cv-* tablature; hide its duplicate name inside the catalog card */
+.chcard .cv-chord{border:none;padding:0;background:none}
+.chcard .cv-name{display:none}
+.chcard-notes{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;border-top:1px solid var(--line);padding-top:7px}
+.chcard-notes span{font-size:10px;font-weight:600;color:var(--ink-dim);background:var(--bg-1);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-family:'JetBrains Mono',monospace}
+@media(max-width:640px){.chtool-grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}}
+
+/* ── Setlists ── */
+.lib-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:2px 4px;font-family:'Inter',sans-serif}
+.lib-link:hover{text-decoration:underline}
+.action-btn.danger{color:#d4521e;border-color:#d4521e44}
+.action-btn.danger:hover{background:#d4521e14;border-color:#d4521e}
+
+/* Setlists table (full view + dashboard panel) */
+.set-table{width:100%;border-collapse:collapse;font-size:13px}
+.set-table thead th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);
+  font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+.set-table tbody tr{cursor:pointer;border-bottom:1px solid var(--line);transition:background .12s}
+.set-table tbody tr:hover{background:var(--bg-1)}
+.set-table td{padding:10px;vertical-align:middle}
+.set-name{font-weight:600;color:var(--ink)}
+.set-count,.set-date{color:var(--ink-dim);font-family:'JetBrains Mono',monospace;font-size:12px}
+.set-row-actions{text-align:right;white-space:nowrap}
+.set-row-actions button{background:var(--bg-1);border:1px solid var(--line);border-radius:5px;width:26px;height:26px;
+  cursor:pointer;color:var(--ink-dim);margin-left:4px;font-size:13px}
+.set-row-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.set-empty{padding:24px;text-align:center;color:var(--ink-faint);font-size:13px}
+
+/* Full view header */
+.set-view,.set-detail{display:flex;flex-direction:column;gap:14px}
+.set-view-head{display:flex;justify-content:flex-end}
+
+/* Dashboard panel under the songs */
+.set-panel{margin-top:28px;border-top:1px solid var(--line);padding-top:16px}
+.set-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.set-panel-title{font-size:14px;font-weight:700;color:var(--ink)}
+
+/* Detail / editor */
+.set-detail-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.set-name-input{flex:1 1 200px;min-width:160px;font-size:18px;font-weight:700;color:var(--ink);
+  background:none;border:none;border-bottom:1px dashed var(--line);padding:4px 2px;font-family:'Spectral',serif}
+.set-name-input:focus{outline:none;border-bottom-color:var(--accent)}
+.set-detail-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.set-add{padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg-0);color:var(--ink);font-size:12px;cursor:pointer}
+.set-songs{display:flex;flex-direction:column;gap:6px}
+.set-song-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:8px;background:var(--bg-0);transition:background .12s,border-color .12s}
+.set-song-row.dragging{opacity:.45}
+.set-song-row.drag-over{border-color:var(--accent);background:var(--accent-bg)}
+.set-drag{cursor:grab;color:var(--ink-faint);font-size:14px;user-select:none}
+.set-song-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-faint);width:22px;text-align:right}
+.set-song-title{font-weight:600;color:var(--ink)}
+.set-song-artist{color:var(--ink-dim);font-size:12px}
+.set-song-bpm{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-faint)}
+.set-song-open,.set-song-del{background:var(--bg-1);border:1px solid var(--line);border-radius:5px;width:26px;height:26px;
+  cursor:pointer;color:var(--ink-dim);font-size:13px}
+.set-song-open:hover{border-color:var(--accent);color:var(--accent)}
+.set-song-del:hover{border-color:#d4521e;color:#d4521e}
